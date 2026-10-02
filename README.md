@@ -40,6 +40,8 @@ schema, so results are directly comparable across domains.
 ```text
 lab-m2/
 ├── README.md                    this file
+├── plots/                       cost-vs-F1 Pareto fronts: imdb_cost_f1_pareto.png,
+│                                amazon_cost_f1_pareto.png, cost_f1_pareto_both_datasets.png
 ├── docs/
 │   ├── edbt2027-paper/          EDBT 2027 submission (LaTeX, figures, main.pdf)
 │   ├── mosig-report/            MOSIG report (LaTeX, figures, main.pdf)
@@ -388,30 +390,51 @@ flowchart TD
     Cand[Structured-filtered candidates] --> Score["Cheap stage scores every item<br/>(signed confidence)"]
     Score --> Sample["Rank by confidence, sample calibration_budget items<br/>(default 20) stratified across the range"]
     Sample --> Oracle["Label each sampled item with the expensive model"]
-    Oracle --> Learn["Sweep candidate thresholds; keep the loosest one<br/>reaching cascade_target agreement (default 0.9)"]
-    Learn --> Route{{"Route every remaining item:<br/>|score| vs. learned threshold"}}
-    Route -->|confident| Trust[Trust the cheap decision — no further LLM call]
-    Route -->|ambiguous, or cheap call failed| Escalate[Escalate to the expensive stage]
+    Oracle --> Learn["fit_cascade_threshold: Beta(1,1) credible-lower-bound sweep<br/>(credible_level 0.9) fits accept and reject thresholds;<br/>each must clear cascade_target precision (default 0.9)"]
+    Learn --> Route{{"Route every remaining item:<br/>score vs. the learned band [τ₋, τ₊]"}}
+    Route -->|"score ≥ τ₊"| Accept[Accept on the cheap score alone]
+    Route -->|"score ≤ τ₋"| Reject[Reject on the cheap score alone]
+    Route -->|"τ₋ < score < τ₊, or cheap call failed"| Escalate[Escalate to the expensive stage]
 ```
 
 Concretely: the cheap stage scores every structured candidate once
 (log-odds per row for `suql_v1`, a three-way label per batch-of-8 for
 `trummer_v1`); a small calibration sample (≤20 items, stratified by
-confidence) is labeled by the expensive model as ground truth; the loosest
-threshold that still reaches 90% agreement with that oracle is adopted; every
-other candidate is routed by whether its cheap-stage confidence clears that
-threshold. `manual_confidence_threshold` can override this entirely and skip
-calibration.
+confidence) is labeled by the expensive model as ground truth;
+`fit_cascade_threshold()` (`profiler.py` for SUQL, the stdlib-only twin
+`threshold_fit.py` for Trummer) then sweeps candidate thresholds separately for
+the accept and reject sides, keeping the most inclusive one on each side whose
+Beta(1,1)-posterior **credible lower bound** on precision still clears
+`cascade_target` (default 0.9) at `credible_level` (default 0.9). This is the
+paper's §4.5 Beta-posterior calibration — a bare point estimate would let a
+threshold backed by only a handful of agreeing items through; the credible
+bound does not (e.g. 10 perfectly-agreeing items only certify a ≈0.81 bound, so
+roughly 29+ are needed to clear 0.9). Every other candidate is routed by
+comparing its score against the resulting asymmetric `[τ₋, τ₊]` band; if the
+two independently-fitted thresholds cross, both are pulled back to the
+calibration median so a real escalation band always remains.
+`manual_confidence_threshold` can override this entirely and skip calibration.
 
-**A repo-hygiene finding worth flagging**: `imdb/approaches/project
-SUQL/v1/profiler.py` implements a separate, more principled **offline**
-Beta-posterior lower-bound threshold fitter, and its output
-(`thresholds.json`) is still checked in — but `CascadeAnswerFilter` stores the
-path to that file and **never reads it**. The threshold actually used at
-inference time is always the lightweight per-query calibration sample
-described above, not the offline Beta-posterior fit. `profiler.py` /
-`thresholds.json` currently look like unused legacy artifacts rather than a
-live part of the pipeline.
+**Update (2026-10-02) — Beta-posterior calibration is now the live path.**
+Earlier revisions of this repo implemented the Beta-posterior fitter
+(`profiler.py` / `threshold_fit.py`) but never called it: the live cascade used
+a plain agreement-rate threshold search instead, which is what an earlier
+version of this section described and what the paper's §4.5 no longer matched.
+`CascadeAnswerFilter` (`suql_v1`) and `CascadeJoin` (`trummer_v1`), on both
+`imdb/` and `amazon/`, now call `fit_cascade_threshold()` for online per-query
+calibration. Mock-Ollama tests covering both are in
+[`test_cascade_filter.py`](<imdb/approaches/project SUQL/v1/test_cascade_filter.py>)
+and
+[`test_cascade.py`](<imdb/approaches/project Trummer/v1/trummer_join/test_cascade.py>).
+
+Two caveats. (1) The numeric results in §4 were produced **before** this change
+(with the agreement-rate calibration), and the new calibration has been
+validated only against a mock Ollama server, not a live one — re-run the
+benchmarks before citing §4 numbers as Beta-calibrated. (2) One disconnected
+piece remains: `thresholds_path` / `thresholds.json` (an *offline*,
+pre-computed threshold file) is still a stored field on `CascadeAnswerFilter`
+that is never read; calibration is always done online from a freshly
+oracle-labelled sample, never loaded from that file.
 
 ---
 
@@ -444,6 +467,17 @@ lowest cost **and** highest F1 at once. `suql_v1`'s bar in the time chart is
 tallest and 77%-dominated by its own "cheap" stage: an unbatched, one-token
 completion still pays the full prompt-prefill cost of a review-length input,
 so it is not actually cheap in wall time (§5).
+
+**Cost–F1 Pareto fronts, both datasets** (10q, Gemma pair; [`plots/`](plots/)).
+Marker area is proportional to mean LLM calls per question, cost is estimated
+from recorded model service time at $3.00/accelerator-hour, and the dashed
+line connects the non-dominated methods within each dataset (IMDb = circles,
+Amazon Fashion = triangles). Per-dataset versions:
+[`imdb_cost_f1_pareto.png`](plots/imdb_cost_f1_pareto.png) and
+[`amazon_cost_f1_pareto.png`](plots/amazon_cost_f1_pareto.png). Like the rest of
+§4, these predate the Beta-posterior calibration change noted in §3.4.
+
+![Cost-F1 Pareto frontier, both datasets](plots/cost_f1_pareto_both_datasets.png)
 
 ### 4.2 Both datasets, 5 questions × 10 repetitions, across 4 model pairs
 

@@ -68,7 +68,7 @@ def _default_data_path() -> str:
     raise FileNotFoundError("Cannot find data/canonical/amazon_joined.csv")
 
 
-DATA_PATH = os.environ.get("SUQL_DATA_PATH", _default_data_path())
+DATA_PATH = os.environ.get("SUQL_DATA_PATH") or _default_data_path()
 
 # Table schema exposed to the LLM semantic parser (mirrors the paper's §4 approach)
 TABLE_SCHEMA = """

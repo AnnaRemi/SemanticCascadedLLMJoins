@@ -191,15 +191,19 @@ def parse_pairs(answer: str, block_1: list[dict], block_2: list[dict]) -> list[d
             pass
 
     # Preferred schema-free protocol: one ``product_id: decision`` per line.
-    for product_id, label in re.findall(
-        r"\b(tt\d+)\b\s*(?:[:=,|\-]|\s)\s*(yes|no|uncertain)\b",
-        answer,
-        flags=re.IGNORECASE,
-    ):
-        if label.lower() != "yes" or product_id not in products_by_id:
-            continue
-        for review in reviews_by_id.get(product_id, []):
-            _append_result(results, seen, products_by_id[product_id], review)
+    # Amazon ASINs (e.g. "B00008JVTT") don't match a fixed shape the way
+    # IMDb's "tt\d+" tconst does, so match against the known product ids
+    # from this block instead of a hardcoded id pattern.
+    if products_by_id:
+        ids_alternation = "|".join(re.escape(pid) for pid in products_by_id if pid)
+        for product_id, label in re.findall(
+            rf"\b({ids_alternation})\b\s*(?:[:=,|\-]|\s)\s*(?i:(yes|no|uncertain))\b",
+            answer,
+        ):
+            if label.lower() != "yes" or product_id not in products_by_id:
+                continue
+            for review in reviews_by_id.get(product_id, []):
+                _append_result(results, seen, products_by_id[product_id], review)
 
     for product_id, review_key in id_pairs:
         if product_id != review_key or product_id not in products_by_id:
@@ -238,12 +242,14 @@ def parse_decisions(answer: str, block_1: list[dict]) -> dict[str, str]:
             label = str(item.get("decision", "")).strip().lower()
             if product_id in valid and label in {"yes", "no", "uncertain"}:
                 decisions[product_id] = label
-    for product_id, label in re.findall(
-        r"\b(tt\d+)\b\s*(?:[:=,|\-]|\s)\s*(yes|no|uncertain)\b",
-        answer, flags=re.IGNORECASE,
-    ):
-        if product_id in valid:
-            decisions[product_id] = label.lower()
+    if valid:
+        ids_alternation = "|".join(re.escape(pid) for pid in valid if pid)
+        for product_id, label in re.findall(
+            rf"\b({ids_alternation})\b\s*(?:[:=,|\-]|\s)\s*(?i:(yes|no|uncertain))\b",
+            answer,
+        ):
+            if product_id in valid:
+                decisions[product_id] = label.lower()
     return decisions
 
 

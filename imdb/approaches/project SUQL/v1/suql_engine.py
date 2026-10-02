@@ -66,6 +66,11 @@ CHEAP_MIN_DECISION_RATE = float(os.environ.get("SUQL_CHEAP_MIN_DECISION_RATE", "
 CHEAP_MIN_PROBES = int(os.environ.get("SUQL_CHEAP_MIN_PROBES", "5"))
 CASCADE_TARGET = float(os.environ.get("SUQL_CASCADE_TARGET", "0.9"))
 CALIBRATION_BUDGET = int(os.environ.get("SUQL_CALIBRATION_BUDGET", "20"))
+CREDIBLE_LEVEL = float(os.environ.get("SUQL_CREDIBLE_LEVEL", "0.9"))
+_ground_truth_raw = os.environ.get("SUQL_GROUND_TRUTH_IDS")
+GROUND_TRUTH_IDS = (
+    frozenset(json.loads(_ground_truth_raw)) if _ground_truth_raw is not None else None
+)
 REQUEST_TIMEOUT = float(os.environ.get("SUQL_REQUEST_TIMEOUT", "120"))
 _manual_confidence_raw = os.environ.get("SUQL_MANUAL_CONFIDENCE_THRESHOLD")
 MANUAL_CONFIDENCE_THRESHOLD = (
@@ -87,7 +92,7 @@ def _default_data_path() -> str:
     raise FileNotFoundError("Cannot find data/canonical/imdb_joined.csv")
 
 
-DATA_PATH = os.environ.get("SUQL_DATA_PATH", _default_data_path())
+DATA_PATH = os.environ.get("SUQL_DATA_PATH") or _default_data_path()
 THRESHOLDS_PATH = os.environ.get(
     "SUQL_THRESHOLDS_PATH",
     os.path.join(_STAGE2_DIR, "thresholds.json"),
@@ -347,6 +352,8 @@ def _get_stage2_answer_filter() -> CascadeAnswerFilter:
             cheap_min_probes=CHEAP_MIN_PROBES,
             cascade_target=CASCADE_TARGET,
             calibration_budget=CALIBRATION_BUDGET,
+            credible_level=CREDIBLE_LEVEL,
+            ground_truth_ids=GROUND_TRUTH_IDS,
             manual_confidence_threshold=MANUAL_CONFIDENCE_THRESHOLD,
             cheap_disabled_questions=CHEAP_DISABLED_QUESTIONS,
             timeout=REQUEST_TIMEOUT,

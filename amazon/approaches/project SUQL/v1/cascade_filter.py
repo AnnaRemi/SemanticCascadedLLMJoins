@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -10,9 +11,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
+import numpy as np
 
 from semantic_dict_context import semantic_guideline
 
+from profiler import fit_cascade_threshold
 from scorer import OllamaLogOddsScorer
 
 
@@ -27,6 +30,7 @@ DEFAULT_CHEAP_MIN_DECISION_RATE = float(os.environ.get("SUQL_CHEAP_MIN_DECISION_
 DEFAULT_CHEAP_MIN_PROBES = int(os.environ.get("SUQL_CHEAP_MIN_PROBES", "5"))
 DEFAULT_CASCADE_TARGET = float(os.environ.get("SUQL_CASCADE_TARGET", "0.9"))
 DEFAULT_CALIBRATION_BUDGET = int(os.environ.get("SUQL_CALIBRATION_BUDGET", "20"))
+DEFAULT_CREDIBLE_LEVEL = float(os.environ.get("SUQL_CREDIBLE_LEVEL", "0.9"))
 DEFAULT_MANUAL_CONFIDENCE_THRESHOLD = os.environ.get("SUQL_MANUAL_CONFIDENCE_THRESHOLD")
 DEFAULT_REQUEST_RETRIES = int(os.environ.get("SUQL_REQUEST_RETRIES", "3"))
 EXPENSIVE_THINK = os.environ.get("EXPENSIVE_THINK", "0") == "1"
@@ -87,6 +91,13 @@ class CascadeStats:
     calibration_expensive_calls: int = 0
     calibration_expensive_accepts: int = 0
     calibration_agreement: float = 0.0
+    calibration_mode: str = ""
+    calibration_labelled_count: int = 0
+    calibration_accept_precision_lower: float = 0.0
+    calibration_reject_precision_lower: float = 0.0
+    calibration_activated: bool = False
+    learned_accept_threshold: float | None = None
+    learned_reject_threshold: float | None = None
     expensive_full_calls: int = 0
     expensive_seconds: float = 0.0
     cheap_score_failure_reasons: dict[str, int] = field(default_factory=dict)
@@ -112,10 +123,19 @@ class CascadeStats:
                 "calibration_expensive_calls": 0,
                 "calibration_expensive_accepts": 0,
                 "calibration_agreement": 0.0,
+                "calibration_mode": "",
+                "calibration_labelled_count": 0,
+                "calibration_accept_precision_lower": 0.0,
+                "calibration_reject_precision_lower": 0.0,
+                "calibration_activated": False,
+                "ground_truth_calibration_skipped_reason": "",
                 "cascade_target": None,
                 "calibration_budget": None,
+                "credible_level": None,
                 "learned_confidence_threshold": None,
                 "routing_confidence_threshold": None,
+                "learned_accept_threshold": None,
+                "learned_reject_threshold": None,
                 "manual_confidence_threshold": None,
                 "expensive_full_calls": 0,
                 "expensive_seconds": 0.0,
@@ -155,6 +175,13 @@ class CascadeStats:
             "calibration_expensive_calls": self.calibration_expensive_calls,
             "calibration_expensive_accepts": self.calibration_expensive_accepts,
             "calibration_agreement": self.calibration_agreement,
+            "calibration_mode": self.calibration_mode,
+            "calibration_labelled_count": self.calibration_labelled_count,
+            "calibration_accept_precision_lower": self.calibration_accept_precision_lower,
+            "calibration_reject_precision_lower": self.calibration_reject_precision_lower,
+            "calibration_activated": self.calibration_activated,
+            "learned_accept_threshold": self.learned_accept_threshold,
+            "learned_reject_threshold": self.learned_reject_threshold,
             "expensive_full_calls": self.expensive_full_calls,
             "expensive_seconds": self.expensive_seconds,
             "cheap_score_failure_reasons": self.cheap_score_failure_reasons,
@@ -173,6 +200,8 @@ class CascadeAnswerFilter:
     cheap_min_probes: int = DEFAULT_CHEAP_MIN_PROBES
     cascade_target: float = DEFAULT_CASCADE_TARGET
     calibration_budget: int = DEFAULT_CALIBRATION_BUDGET
+    credible_level: float = DEFAULT_CREDIBLE_LEVEL
+    ground_truth_ids: frozenset[str] | None = None
     manual_confidence_threshold: float | None = (
         float(DEFAULT_MANUAL_CONFIDENCE_THRESHOLD)
         if DEFAULT_MANUAL_CONFIDENCE_THRESHOLD not in (None, "")
@@ -192,11 +221,16 @@ class CascadeAnswerFilter:
         self.cheap_min_probes = int(self.cheap_min_probes)
         self.cascade_target = float(self.cascade_target)
         self.calibration_budget = int(self.calibration_budget)
+        self.credible_level = float(self.credible_level)
         self.request_retries = max(1, int(self.request_retries))
         if not 0.0 < self.cascade_target <= 1.0:
             raise ValueError("cascade_target must be in (0, 1]")
         if self.calibration_budget < 0:
             raise ValueError("calibration_budget must be non-negative")
+        if not 0.0 < self.credible_level < 1.0:
+            raise ValueError("credible_level must be in (0, 1)")
+        if self.ground_truth_ids is not None:
+            self.ground_truth_ids = frozenset(str(x) for x in self.ground_truth_ids)
         if self.manual_confidence_threshold is not None:
             self.manual_confidence_threshold = float(self.manual_confidence_threshold)
             if self.manual_confidence_threshold < 0:
@@ -232,17 +266,28 @@ class CascadeAnswerFilter:
     def answer(self, review_text: str, question: str) -> str:
         return self.answer_batch([review_text], question)[0]
 
-    def answer_batch(self, review_texts: list[str], question: str) -> list[str]:
+    def answer_batch(
+        self,
+        review_texts: list[str],
+        question: str,
+        *,
+        row_ids: list[str | None] | None = None,
+    ) -> list[str]:
         usage = self.stats.usage_for(question, self.cheap_model, self.expensive_model)
         usage["cheap_accept_floor"] = self.cheap_accept_floor
         usage["cheap_min_decision_rate"] = self.cheap_min_decision_rate
         usage["cheap_min_probes"] = self.cheap_min_probes
         usage["cascade_target"] = self.cascade_target
         usage["calibration_budget"] = self.calibration_budget
+        usage["credible_level"] = self.credible_level
         usage["manual_confidence_threshold"] = self.manual_confidence_threshold
         usage["cheap_disabled_for_question"] = question in self.cheap_disabled_questions
         results: list[str | None] = [None] * len(review_texts)
-        scored: list[tuple[int, str, float]] = []
+        scored: list[tuple[int, str, float, str | None]] = []
+        ids: list[str | None] = (
+            list(row_ids) if row_ids is not None and len(row_ids) == len(review_texts)
+            else [None] * len(review_texts)
+        )
 
         for index, raw_text in enumerate(review_texts):
             review_text = "" if raw_text is None else str(raw_text)
@@ -290,27 +335,54 @@ class CascadeAnswerFilter:
             self.stats.cheap_seconds += elapsed
             usage["cheap_seconds"] = float(usage["cheap_seconds"]) + elapsed
 
-            scored.append((index, review_text, score))
+            scored.append((index, review_text, score, ids[index]))
 
         if self.manual_confidence_threshold is None:
-            routing_threshold = self._learn_confidence_threshold(scored, question, usage)
-            learned_threshold = routing_threshold
+            accept_threshold, reject_threshold = self._learn_confidence_threshold(scored, question, usage)
         else:
-            routing_threshold = self.manual_confidence_threshold
-            learned_threshold = None
-        usage["learned_confidence_threshold"] = learned_threshold
-        usage["routing_confidence_threshold"] = routing_threshold
+            accept_threshold, reject_threshold = (
+                self.manual_confidence_threshold,
+                -self.manual_confidence_threshold,
+            )
+            usage["calibration_mode"] = "manual"
+            self.stats.calibration_mode = "manual"
+            self.stats.calibration_activated = True
+        usage["learned_accept_threshold"] = accept_threshold
+        usage["learned_reject_threshold"] = reject_threshold
+        # Kept for backward compatibility with anything still reading the old
+        # single-threshold keys; mirrors the accept-side value.
+        usage["learned_confidence_threshold"] = (
+            accept_threshold if math.isfinite(accept_threshold) else None
+        )
+        usage["routing_confidence_threshold"] = accept_threshold
+        self.stats.learned_accept_threshold = (
+            accept_threshold if math.isfinite(accept_threshold) else None
+        )
+        self.stats.learned_reject_threshold = (
+            reject_threshold if math.isfinite(reject_threshold) else None
+        )
+        self.stats.calibration_mode = str(usage.get("calibration_mode") or self.stats.calibration_mode)
+        self.stats.calibration_labelled_count = int(usage.get("calibration_labelled_count") or 0)
+        self.stats.calibration_accept_precision_lower = float(
+            usage.get("calibration_accept_precision_lower") or 0.0
+        )
+        self.stats.calibration_reject_precision_lower = float(
+            usage.get("calibration_reject_precision_lower") or 0.0
+        )
+        self.stats.calibration_activated = bool(
+            usage.get("calibration_activated", self.stats.calibration_activated)
+        )
 
-        for index, review_text, score in scored:
+        for index, review_text, score, _row_id in scored:
             if results[index] is not None:
                 continue
             key = self._cache_key(review_text, question)
-            if _is_confident(score, routing_threshold) and score >= 0:
+            if score >= accept_threshold:
                 self.stats.cheap_early_accept += 1
                 usage["cheap_early_accept"] = int(usage["cheap_early_accept"]) + 1
                 self.cache[key] = "Yes"
                 results[index] = "Yes"
-            elif _is_confident(score, routing_threshold):
+            elif score <= reject_threshold:
                 self.stats.cheap_early_reject += 1
                 usage["cheap_early_reject"] = int(usage["cheap_early_reject"]) + 1
                 self.cache[key] = "No"
@@ -324,19 +396,50 @@ class CascadeAnswerFilter:
 
     def _learn_confidence_threshold(
         self,
-        scored: list[tuple[int, str, float]],
+        scored: list[tuple[int, str, float, str | None]],
         question: str,
         usage: dict[str, object],
-    ) -> float | None:
-        calibration_items = _calibration_sample(scored, self.calibration_budget)
+    ) -> tuple[float, float]:
+        use_ground_truth = self.ground_truth_ids is not None and all(
+            row_id for *_rest, row_id in scored
+        )
+        if use_ground_truth:
+            usage["calibration_mode"] = "ground_truth"
+            return self._learn_threshold_from_ground_truth(scored, usage)
+
+        if self.ground_truth_ids is not None:
+            # ground_truth_ids configured but some rows lack an id (e.g. a
+            # custom suql_query override didn't select product_id) -- never
+            # mix modes per-row, fall back to the oracle path entirely.
+            usage["ground_truth_calibration_skipped_reason"] = "row_ids unavailable"
+        usage["calibration_mode"] = "oracle"
+        return self._learn_threshold_from_oracle(scored, question, usage)
+
+    def _learn_threshold_from_oracle(
+        self,
+        scored: list[tuple[int, str, float, str | None]],
+        question: str,
+        usage: dict[str, object],
+    ) -> tuple[float, float]:
+        """Calibrate the accept/reject band via Beta-posterior credible bounds
+        (fit_cascade_threshold), using the expensive model as a weak oracle on a
+        calibration sample. This is the paper's sec:cascade-math procedure; see
+        profiler.py for the Beta(1,1)-credible-lower-bound fit itself."""
+        calibration_items = _calibration_sample(
+            [(index, review_text, score) for index, review_text, score, _row_id in scored],
+            self.calibration_budget,
+        )
         if not calibration_items:
             usage["calibration_agreement"] = 0.0
+            usage["calibration_activated"] = False
             self.stats.calibration_agreement = 0.0
-            return None
+            return math.inf, -math.inf
 
-        records: list[tuple[float, bool, bool]] = []
+        scores: list[float] = []
+        labels: list[int] = []
         self.stats.calibration_candidates += len(calibration_items)
         usage["calibration_candidates"] = int(usage["calibration_candidates"]) + len(calibration_items)
+        usage["calibration_labelled_count"] = len(calibration_items)
         for _index, review_text, score in calibration_items:
             self.stats.calibration_expensive_calls += 1
             usage["calibration_expensive_calls"] = int(usage["calibration_expensive_calls"]) + 1
@@ -344,16 +447,96 @@ class CascadeAnswerFilter:
             oracle_label = _normalised_yes_no(oracle)
             if oracle_label is None:
                 continue
-            oracle_accepts = oracle_label is True
-            if oracle_accepts:
+            if oracle_label:
                 self.stats.calibration_expensive_accepts += 1
                 usage["calibration_expensive_accepts"] = int(usage["calibration_expensive_accepts"]) + 1
-            records.append((abs(score), score >= 0, oracle_accepts))
+            scores.append(score)
+            labels.append(1 if oracle_label else 0)
 
-        threshold, agreement = _learn_threshold(records, self.cascade_target)
+        if not scores:
+            usage["calibration_agreement"] = 0.0
+            usage["calibration_activated"] = False
+            self.stats.calibration_agreement = 0.0
+            return math.inf, -math.inf
+
+        result = fit_cascade_threshold(
+            question,
+            np.asarray(scores, dtype=float),
+            np.asarray(labels, dtype=int),
+            accept_precision_target=self.cascade_target,
+            reject_precision_target=self.cascade_target,
+            credible_level=self.credible_level,
+        )
+        usage["calibration_accept_precision_lower"] = result.accept_precision_lower
+        usage["calibration_reject_precision_lower"] = result.reject_precision_lower
+
+        selected = [
+            (score >= result.cheap_accept_threshold) or (score <= result.cheap_reject_threshold)
+            for score in scores
+        ]
+        selected_count = sum(selected)
+        agreed = sum(
+            1
+            for score, label, is_selected in zip(scores, labels, selected)
+            if is_selected and int(score >= 0) == label
+        )
+        agreement = agreed / selected_count if selected_count else 0.0
         self.stats.calibration_agreement = agreement
         usage["calibration_agreement"] = agreement
-        return threshold
+        usage["calibration_activated"] = (
+            result.cheap_accept_threshold < math.inf or result.cheap_reject_threshold > -math.inf
+        )
+        return result.cheap_accept_threshold, result.cheap_reject_threshold
+
+    def _learn_threshold_from_ground_truth(
+        self,
+        scored: list[tuple[int, str, float, str | None]],
+        usage: dict[str, object],
+    ) -> tuple[float, float]:
+        assert self.ground_truth_ids is not None
+        scores = [score for _index, _review_text, score, _row_id in scored]
+        labels = [
+            1 if row_id in self.ground_truth_ids else 0
+            for _index, _review_text, _score, row_id in scored
+        ]
+        self.stats.calibration_candidates += len(scores)
+        usage["calibration_candidates"] = int(usage["calibration_candidates"]) + len(scores)
+        usage["calibration_labelled_count"] = len(scores)
+
+        if not scores:
+            usage["calibration_agreement"] = 0.0
+            usage["calibration_activated"] = False
+            self.stats.calibration_agreement = 0.0
+            return math.inf, -math.inf
+
+        result = fit_cascade_threshold(
+            "",
+            np.asarray(scores, dtype=float),
+            np.asarray(labels, dtype=int),
+            accept_precision_target=self.cascade_target,
+            reject_precision_target=self.cascade_target,
+            credible_level=self.credible_level,
+        )
+        usage["calibration_accept_precision_lower"] = result.accept_precision_lower
+        usage["calibration_reject_precision_lower"] = result.reject_precision_lower
+
+        selected = [
+            (score >= result.cheap_accept_threshold) or (score <= result.cheap_reject_threshold)
+            for score in scores
+        ]
+        selected_count = sum(selected)
+        agreed = sum(
+            1
+            for score, label, is_selected in zip(scores, labels, selected)
+            if is_selected and int(score >= 0) == label
+        )
+        agreement = agreed / selected_count if selected_count else 0.0
+        self.stats.calibration_agreement = agreement
+        usage["calibration_agreement"] = agreement
+        usage["calibration_activated"] = (
+            result.cheap_accept_threshold < math.inf or result.cheap_reject_threshold > -math.inf
+        )
+        return result.cheap_accept_threshold, result.cheap_reject_threshold
 
     def expensive_answer(self, review_text: str, question: str) -> str:
         usage = self.stats.usage_for(question, self.cheap_model, self.expensive_model)
@@ -499,33 +682,6 @@ def _calibration_sample(
         selected.append((index, review_text, score))
         selected_indexes.add(index)
     return selected
-
-
-def _learn_threshold(
-    records: list[tuple[float, bool, bool]],
-    target: float,
-) -> tuple[float | None, float]:
-    best_agreement = 0.0
-    for threshold in sorted({confidence for confidence, _proxy_label, _oracle_label in records}):
-        selected = [
-            (proxy_label, oracle_label)
-            for confidence, proxy_label, oracle_label in records
-            if confidence >= threshold
-        ]
-        if not selected:
-            continue
-        agreement = sum(
-            int(proxy_label == oracle_label)
-            for proxy_label, oracle_label in selected
-        ) / len(selected)
-        best_agreement = max(best_agreement, agreement)
-        if agreement >= target:
-            return threshold, agreement
-    return None, best_agreement
-
-
-def _is_confident(score: float, threshold: float | None) -> bool:
-    return threshold is not None and abs(score) >= threshold
 
 
 def _normalised_yes_no(value: str) -> bool | None:

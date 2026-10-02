@@ -74,6 +74,11 @@ MANUAL_CONFIDENCE_THRESHOLD = (
     else None
 )
 CHEAP_DISABLED_QUESTIONS = parse_disabled_questions(os.environ.get("SUQL_CHEAP_DISABLED_QUESTIONS"))
+CREDIBLE_LEVEL = float(os.environ.get("SUQL_CREDIBLE_LEVEL", "0.9"))
+_ground_truth_raw = os.environ.get("SUQL_GROUND_TRUTH_IDS")
+GROUND_TRUTH_IDS = (
+    frozenset(json.loads(_ground_truth_raw)) if _ground_truth_raw is not None else None
+)
 
 
 def _default_data_path() -> str:
@@ -87,7 +92,7 @@ def _default_data_path() -> str:
     raise FileNotFoundError("Cannot find data/canonical/amazon_joined.csv")
 
 
-DATA_PATH = os.environ.get("SUQL_DATA_PATH", _default_data_path())
+DATA_PATH = os.environ.get("SUQL_DATA_PATH") or _default_data_path()
 THRESHOLDS_PATH = os.environ.get(
     "SUQL_THRESHOLDS_PATH",
     os.path.join(_STAGE2_DIR, "thresholds.json"),
@@ -347,6 +352,8 @@ def _get_stage2_answer_filter() -> CascadeAnswerFilter:
             cheap_min_probes=CHEAP_MIN_PROBES,
             cascade_target=CASCADE_TARGET,
             calibration_budget=CALIBRATION_BUDGET,
+            credible_level=CREDIBLE_LEVEL,
+            ground_truth_ids=GROUND_TRUTH_IDS,
             manual_confidence_threshold=MANUAL_CONFIDENCE_THRESHOLD,
             cheap_disabled_questions=CHEAP_DISABLED_QUESTIONS,
             timeout=REQUEST_TIMEOUT,
@@ -362,8 +369,12 @@ def answer_fn(review_text: str, question: str) -> str:
     return _get_stage2_answer_filter().answer(review_text, question)
 
 
-def answer_batch(review_texts: list[str], question: str) -> list[str]:
-    return _get_stage2_answer_filter().answer_batch(review_texts, question)
+def answer_batch(
+    review_texts: list[str],
+    question: str,
+    row_ids: list[str | None] | None = None,
+) -> list[str]:
+    return _get_stage2_answer_filter().answer_batch(review_texts, question, row_ids=row_ids)
 
 
 def summary_fn(review_text: str) -> str:
@@ -720,7 +731,12 @@ def _execute_suql_impl(
             active_indexes = list(candidate_df[keep_mask].index)
             total_active = len(active_indexes)
             texts = [str(candidate_df.at[idx, col]) for idx in active_indexes]
-            results = answer_batch(texts, question)
+            row_ids = (
+                [str(candidate_df.at[idx, "product_id"]) for idx in active_indexes]
+                if "product_id" in candidate_df.columns
+                else None
+            )
+            results = answer_batch(texts, question, row_ids=row_ids)
             for position, (idx, result) in enumerate(zip(active_indexes, results), start=1):
                 if result.strip().lower() != expected.strip().lower():
                     keep_mask.at[idx] = False

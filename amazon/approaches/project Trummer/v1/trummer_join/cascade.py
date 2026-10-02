@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import random
 import re
@@ -14,6 +15,7 @@ PAIR_LABEL_RE = re.compile(r"\b(?:candidate|pair)[_ #:-]*(\d+)\b", re.IGNORECASE
 PLAIN_NUMBER_RE = re.compile(r"^\s*(\d+)\s*$")
 
 from .semantic_dict_context import semantic_guideline
+from .threshold_fit import fit_cascade_threshold
 
 CHEAP_EVIDENCE_INSTRUCTIONS = """Act as a high-recall first-pass semantic filter.
 
@@ -50,7 +52,6 @@ class Candidate:
 class Decision:
     candidate_id: int
     product_id: str
-    product_id: str
     score: float | None
     route: str
     error: str = ""
@@ -63,6 +64,7 @@ class CascadeConfig:
     expensive_model: str = "gemma4:e4b"
     cascade_target: float = 0.9
     calibration_budget: int = 20
+    credible_level: float = 0.9
     manual_confidence_threshold: float | None = None
     cheap_batch_size: int = 8
     expensive_batch_size: int = 32
@@ -74,6 +76,8 @@ class CascadeConfig:
             raise ValueError("cascade_target must be in (0, 1]")
         if self.calibration_budget < 0:
             raise ValueError("calibration_budget must be non-negative")
+        if not 0.0 < self.credible_level < 1.0:
+            raise ValueError("credible_level must be in (0, 1)")
         if (
             self.manual_confidence_threshold is not None
             and self.manual_confidence_threshold < 0
@@ -105,8 +109,13 @@ class CascadeMetrics:
     calibration_expensive_calls: int = 0
     calibration_expensive_accepts: int = 0
     calibration_agreement: float = 0.0
+    calibration_accept_precision_lower: float = 0.0
+    calibration_reject_precision_lower: float = 0.0
+    calibration_activated: bool = False
     learned_confidence_threshold: float | None = None
     routing_confidence_threshold: float | None = None
+    learned_accept_threshold: float | None = None
+    learned_reject_threshold: float | None = None
     manual_confidence_threshold: float | None = None
     expensive_candidates: int = 0
     expensive_calls: int = 0
@@ -291,13 +300,25 @@ class CascadeJoin:
                     scored.append((candidate, float(score), ""))
 
         if self.config.manual_confidence_threshold is None:
-            learned_threshold = self._learn_confidence_threshold(scored, predicate, metrics)
-            routing_threshold = learned_threshold
+            accept_threshold, reject_threshold = self._learn_confidence_threshold(
+                scored, predicate, metrics
+            )
         else:
-            learned_threshold = None
-            routing_threshold = self.config.manual_confidence_threshold
-        metrics.learned_confidence_threshold = learned_threshold
-        metrics.routing_confidence_threshold = routing_threshold
+            accept_threshold = self.config.manual_confidence_threshold
+            reject_threshold = -self.config.manual_confidence_threshold
+            metrics.calibration_activated = True
+        # Kept for backward compatibility with anything still reading the old
+        # single-threshold keys; mirrors the accept-side value.
+        metrics.learned_confidence_threshold = (
+            accept_threshold if math.isfinite(accept_threshold) else None
+        )
+        metrics.routing_confidence_threshold = accept_threshold
+        metrics.learned_accept_threshold = (
+            accept_threshold if math.isfinite(accept_threshold) else None
+        )
+        metrics.learned_reject_threshold = (
+            reject_threshold if math.isfinite(reject_threshold) else None
+        )
         metrics.manual_confidence_threshold = self.config.manual_confidence_threshold
 
         for candidate, score, error in scored:
@@ -305,11 +326,11 @@ class CascadeJoin:
                 metrics.expensive_candidates += 1
                 uncertain.append(candidate)
                 decisions.append(_decision(candidate, None, "expensive", error))
-            elif _is_confident(score, routing_threshold) and score >= 0:
+            elif score >= accept_threshold:
                 metrics.cheap_early_accepts += 1
                 accepted.append(candidate)
                 decisions.append(_decision(candidate, score, "cheap_accept"))
-            elif _is_confident(score, routing_threshold):
+            elif score <= reject_threshold:
                 metrics.cheap_early_rejects += 1
                 decisions.append(_decision(candidate, score, "cheap_reject"))
             else:
@@ -377,19 +398,24 @@ class CascadeJoin:
         scored: list[tuple[Candidate, float | None, str]],
         predicate: str,
         metrics: CascadeMetrics,
-    ) -> float | None:
+    ) -> tuple[float, float]:
+        """Calibrate the accept/reject band via Beta-posterior credible bounds
+        (fit_cascade_threshold), using the expensive model as a weak oracle on a
+        calibration sample. This is the paper's sec:cascade-math procedure; see
+        threshold_fit.py for the Beta(1,1)-credible-lower-bound fit itself."""
         calibration_candidates = _calibration_sample(
             scored,
             self.config.calibration_budget,
         )
         if not calibration_candidates:
-            return None
+            return math.inf, -math.inf
         scores_by_id = {
             candidate.candidate_id: score
             for candidate, score, _ in scored
             if score is not None
         }
-        records: list[tuple[float, bool, bool]] = []
+        calibration_scores: list[float] = []
+        calibration_labels: list[int] = []
         calibration_batches = list(
             _blocks(calibration_candidates, self.config.expensive_batch_size)
         )
@@ -423,16 +449,42 @@ class CascadeJoin:
                 score = scores_by_id.get(candidate.candidate_id)
                 if score is None:
                     continue
-                records.append(
-                    (
-                        abs(score),
-                        score >= 0,
-                        candidate.candidate_id in oracle_accepts,
-                    )
+                calibration_scores.append(score)
+                calibration_labels.append(
+                    1 if candidate.candidate_id in oracle_accepts else 0
                 )
-        threshold, agreement = _learn_threshold(records, self.config.cascade_target)
-        metrics.calibration_agreement = agreement
-        return threshold
+
+        if not calibration_scores:
+            metrics.calibration_agreement = 0.0
+            metrics.calibration_activated = False
+            return math.inf, -math.inf
+
+        result = fit_cascade_threshold(
+            predicate,
+            calibration_scores,
+            calibration_labels,
+            accept_precision_target=self.config.cascade_target,
+            reject_precision_target=self.config.cascade_target,
+            credible_level=self.config.credible_level,
+        )
+        metrics.calibration_accept_precision_lower = result.accept_precision_lower
+        metrics.calibration_reject_precision_lower = result.reject_precision_lower
+
+        selected = [
+            (score >= result.cheap_accept_threshold) or (score <= result.cheap_reject_threshold)
+            for score in calibration_scores
+        ]
+        selected_count = sum(selected)
+        agreed = sum(
+            1
+            for score, label, is_selected in zip(calibration_scores, calibration_labels, selected)
+            if is_selected and int(score >= 0) == label
+        )
+        metrics.calibration_agreement = agreed / selected_count if selected_count else 0.0
+        metrics.calibration_activated = (
+            result.cheap_accept_threshold < math.inf or result.cheap_reject_threshold > -math.inf
+        )
+        return result.cheap_accept_threshold, result.cheap_reject_threshold
 
 
 def exact_id_candidates(
@@ -509,7 +561,6 @@ def _decision(
     return Decision(
         candidate.candidate_id,
         candidate.product.get("product_id", ""),
-        candidate.review.get("product_id", ""),
         score,
         route,
         error,
@@ -882,32 +933,6 @@ def _calibration_sample(
         selected_ids.add(candidate.candidate_id)
     return selected
 
-
-def _learn_threshold(
-    records: list[tuple[float, bool, bool]],
-    target: float,
-) -> tuple[float | None, float]:
-    best_agreement = 0.0
-    for threshold in sorted({confidence for confidence, _, _ in records}):
-        selected = [
-            (proxy_label, oracle_label)
-            for confidence, proxy_label, oracle_label in records
-            if confidence >= threshold
-        ]
-        if not selected:
-            continue
-        agreement = sum(
-            int(proxy_label == oracle_label)
-            for proxy_label, oracle_label in selected
-        ) / len(selected)
-        best_agreement = max(best_agreement, agreement)
-        if agreement >= target:
-            return threshold, agreement
-    return None, best_agreement
-
-
-def _is_confident(score: float, threshold: float | None) -> bool:
-    return threshold is not None and abs(score) >= threshold
 
 
 def _post_json(url: str, payload: dict, timeout: float) -> dict:

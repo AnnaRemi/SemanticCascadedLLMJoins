@@ -108,7 +108,7 @@ def fit_cascade_threshold(
     labels: np.ndarray,
     accept_precision_target: float = 0.9,
     reject_precision_target: float = 0.9,
-    credible_level: float = 0.95,
+    credible_level: float = 0.9,
 ) -> CascadeThreshold:
     accept_threshold, accept_lower, early_accept_count = _fit_accept_threshold(
         scores,
@@ -152,7 +152,7 @@ def profile_dataframe(
     scorer: OllamaLogOddsScorer,
     accept_precision_target: float = 0.9,
     reject_precision_target: float = 0.9,
-    credible_level: float = 0.95,
+    credible_level: float = 0.9,
 ) -> dict:
     required = {"review", "question", "label"}
     missing = required - set(df.columns)
