@@ -7,6 +7,10 @@ import resource
 from pathlib import Path
 
 
+# A handful of Amazon Fashion rows have scraped JS/HTML dumped into a field
+# (observed up to ~422KB), which blows past Python's default 128KB csv limit.
+csv.field_size_limit(10_000_000)
+
 LAB_ROOT = Path(__file__).resolve().parents[3]
 # The four method implementations live under <dataset>/approaches/.
 APPROACH_ROOT = LAB_ROOT / "approaches"

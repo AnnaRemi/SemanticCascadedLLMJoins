@@ -65,6 +65,26 @@ def run_suql_baseline(args: argparse.Namespace, spec: dict, output_dir: Path) ->
     }
 
 
+def _suql_calibration_summary(engine_metrics: dict) -> dict:
+    """Per-run calibration outcome of SUQL v1 (one semantic predicate per query).
+
+    ``cheap_score_mode`` records how the cheap scores were obtained:
+    ``native_logprobs`` means real log-odds; ``label_only`` means the server
+    returned no log-probs and every score is just +-2.
+    """
+    usages = list((engine_metrics.get("model_usage_by_question") or {}).values())
+    usage = usages[0] if usages else {}
+    return {
+        "calibration_mode": usage.get("calibration_mode", ""),
+        "calibration_activated": bool(usage.get("calibration_activated", False)),
+        "calibration_labelled_count": int(usage.get("calibration_labelled_count", 0)),
+        "calibration_reused_labels": int(usage.get("calibration_reused_labels", 0)),
+        "calibration_accept_precision_lower": float(usage.get("calibration_accept_precision_lower", 0.0)),
+        "calibration_reject_recall_lower": float(usage.get("calibration_reject_recall_lower", 0.0)),
+        "cheap_score_mode": usage.get("cheap_score_mode", ""),
+    }
+
+
 def run_suql_v1(args: argparse.Namespace, spec: dict, output_dir: Path) -> dict:
     engine_dir = APPROACH_ROOT / "project SUQL" / "v1"
     metrics_path = output_dir / "engine_metrics.json"
@@ -119,6 +139,7 @@ def run_suql_v1(args: argparse.Namespace, spec: dict, output_dir: Path) -> dict:
         "calibration_expensive_calls": int(engine_metrics.get("calibration_expensive_calls", 0)),
         "calibration_expensive_accepts": int(engine_metrics.get("calibration_expensive_accepts", 0)),
         "calibration_agreement": float(engine_metrics.get("calibration_agreement", 0.0)),
+        **_suql_calibration_summary(engine_metrics),
         "final_answer_rows": int(len(results)),
         "found_movie_ids": sorted(results["movie_id"].astype(str).unique()),
         "structured_candidates": int(engine_metrics["structured_candidates"]),
@@ -323,7 +344,7 @@ def main() -> None:
     parser.add_argument("--expensive-model", default="ollama/gemma4:e4b")
     parser.add_argument("--structured-parser-model")
     parser.add_argument("--disable-llm-structured-parser", action="store_true")
-    parser.add_argument("--cascade-target", type=float, default=0.9)
+    parser.add_argument("--cascade-target", type=float, default=0.8)
     parser.add_argument("--calibration-budget", type=int, default=20)
     parser.add_argument("--manual-confidence-threshold", type=float)
     parser.add_argument("--cheap-accept-threshold", type=float, default=3.0)

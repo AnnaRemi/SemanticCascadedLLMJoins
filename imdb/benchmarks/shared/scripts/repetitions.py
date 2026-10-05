@@ -193,6 +193,11 @@ def _mean_metrics(runs: list[dict], truth: set[str]) -> dict:
         ]
         if values:
             result[key] = sum(values) / len(values)
+    # Booleans are skipped by the numeric mean above, so record how often the
+    # calibration engaged instead of letting the last repetition stand for all.
+    result["calibration_activated_rate"] = sum(
+        bool(run.get("calibration_activated", False)) for run in runs
+    ) / len(runs)
     qualities = [_quality(run, truth) for run in runs]
     for key in (
         "true_positives",
@@ -222,6 +227,12 @@ def _write_repetition_csv(path: Path, runs: Iterable[dict], truth: set[str]) -> 
             "cheap_calls": run.get("cheap_calls", 0),
             "expensive_calls": run.get("expensive_calls", 0),
             "final_answer_rows": run.get("final_answer_rows", 0),
+            "cheap_early_accepts": run.get("cheap_early_accepts", 0),
+            "cheap_early_rejects": run.get("cheap_early_rejects", 0),
+            "calibration_activated": int(bool(run.get("calibration_activated", False))),
+            "calibration_reject_recall_lower": run.get("calibration_reject_recall_lower", 0.0),
+            "calibration_accept_precision_lower": run.get("calibration_accept_precision_lower", 0.0),
+            "calibration_reused_labels": run.get("calibration_reused_labels", 0),
             **quality,
         }
         rows.append(row)

@@ -12,6 +12,8 @@ WALLTIME="24:00:00"
 PARALLEL_WORKERS=4
 PULL_MODELS=0
 REQUIRE_GPU=1
+NO_SEMANTIC_DICT=0
+CALIBRATION_BUDGET="${CALIBRATION_BUDGET:-20}"
 # Retain per-question run_metrics_repetitions.csv. Defaults on for multi-rep
 # runs, since otherwise the per-repetition numbers are pruned after averaging.
 KEEP_RUN_ARTIFACTS="${KEEP_RUN_ARTIFACTS:-}"
@@ -20,7 +22,7 @@ AKER_HOST="${AKER_HOST:-remizova@aker.imag.fr}"
 AKER_ROOT="${AKER_ROOT:-/home/daisy/remizova/lab_m2_benchmarks}"
 
 usage() {
-  echo "Usage: $0 --suite {10q|5q|3q|1q} [--repetitions N] [--methods '...'] [--cheap-model M] [--expensive-model M] [--output-name N] [--pull-models] [--allow-cpu]"
+  echo "Usage: $0 --suite {10q|5q|3q|1q} [--repetitions N] [--methods '...'] [--cheap-model M] [--expensive-model M] [--output-name N] [--pull-models] [--allow-cpu] [--no-semantic-dict]"
 }
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -34,6 +36,8 @@ while [[ $# -gt 0 ]]; do
     --parallel-workers) PARALLEL_WORKERS="$2"; shift 2;;
     --pull-models) PULL_MODELS=1; shift;;
     --allow-cpu) REQUIRE_GPU=0; shift;;
+    --no-semantic-dict) NO_SEMANTIC_DICT=1; shift;;
+    --calibration-budget) CALIBRATION_BUDGET="$2"; shift 2;;
     -h|--help) usage; exit 0;;
     *) echo "ERROR: unknown option $1" >&2; usage >&2; exit 2;;
   esac
@@ -67,6 +71,8 @@ ssh "$AKER_HOST" "
     'export PARALLEL_WORKERS=$PARALLEL_WORKERS' \
     'export PULL_MODELS=$PULL_MODELS' \
     'export REQUIRE_GPU=$REQUIRE_GPU' \
+    'export NO_SEMANTIC_DICT=$NO_SEMANTIC_DICT' \
+    'export CALIBRATION_BUDGET=$CALIBRATION_BUDGET' \
     'export KEEP_RUN_ARTIFACTS=$KEEP_RUN_ARTIFACTS' \
     'exec bash $AKER_ROOT/benchmarks/shared/scripts/_aker_worker.sh' > \"\$WRAPPER\"
   chmod 700 \"\$WRAPPER\"

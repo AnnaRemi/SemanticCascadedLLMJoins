@@ -15,7 +15,7 @@ PAIR_LABEL_RE = re.compile(r"\b(?:candidate|pair)[_ #:-]*(\d+)\b", re.IGNORECASE
 PLAIN_NUMBER_RE = re.compile(r"^\s*(\d+)\s*$")
 
 from .semantic_dict_context import semantic_guideline
-from .threshold_fit import fit_cascade_threshold
+from .band_fit import DEFAULT_STRATA, fit_band, stratified_sample
 
 CHEAP_EVIDENCE_INSTRUCTIONS = """Act as a high-recall first-pass semantic filter.
 
@@ -62,9 +62,10 @@ class CascadeConfig:
     api_base: str = "http://127.0.0.1:11434"
     cheap_model: str = "gemma4:e2b"
     expensive_model: str = "gemma4:e4b"
-    cascade_target: float = 0.9
+    cascade_target: float = 0.8
     calibration_budget: int = 20
     credible_level: float = 0.9
+    calibration_strata: int = DEFAULT_STRATA
     manual_confidence_threshold: float | None = None
     cheap_batch_size: int = 8
     expensive_batch_size: int = 32
@@ -78,6 +79,8 @@ class CascadeConfig:
             raise ValueError("calibration_budget must be non-negative")
         if not 0.0 < self.credible_level < 1.0:
             raise ValueError("credible_level must be in (0, 1)")
+        if self.calibration_strata < 2:
+            raise ValueError("calibration_strata must be at least 2")
         if (
             self.manual_confidence_threshold is not None
             and self.manual_confidence_threshold < 0
@@ -111,6 +114,8 @@ class CascadeMetrics:
     calibration_agreement: float = 0.0
     calibration_accept_precision_lower: float = 0.0
     calibration_reject_precision_lower: float = 0.0
+    calibration_reject_recall_lower: float = 0.0
+    calibration_reused_labels: int = 0
     calibration_activated: bool = False
     learned_confidence_threshold: float | None = None
     routing_confidence_threshold: float | None = None
@@ -121,6 +126,7 @@ class CascadeMetrics:
     expensive_calls: int = 0
     fallback_expensive_calls: int = 0
     expensive_failures: int = 0
+    expensive_undecided: int = 0
     expensive_accepts: int = 0
     nonempty_fallback_rows: int = 0
     cheap_seconds: float = 0.0
@@ -299,9 +305,10 @@ class CascadeJoin:
                 else:
                     scored.append((candidate, float(score), ""))
 
+        calibration_oracle: dict[int, bool] = {}
         if self.config.manual_confidence_threshold is None:
             accept_threshold, reject_threshold = self._learn_confidence_threshold(
-                scored, predicate, metrics
+                scored, predicate, metrics, calibration_oracle
             )
         else:
             accept_threshold = self.config.manual_confidence_threshold
@@ -321,8 +328,21 @@ class CascadeJoin:
         )
         metrics.manual_confidence_threshold = self.config.manual_confidence_threshold
 
+        metrics.calibration_reused_labels = len(calibration_oracle)
         for candidate, score, error in scored:
-            if score is None:
+            oracle_accepts = calibration_oracle.get(candidate.candidate_id)
+            if oracle_accepts is not None:
+                # Already answered by the expensive model during calibration.
+                if oracle_accepts:
+                    accepted.append(candidate)
+                decisions.append(
+                    _decision(
+                        candidate,
+                        score,
+                        "calibration_accept" if oracle_accepts else "calibration_reject",
+                    )
+                )
+            elif score is None:
                 metrics.expensive_candidates += 1
                 uncertain.append(candidate)
                 decisions.append(_decision(candidate, None, "expensive", error))
@@ -342,24 +362,8 @@ class CascadeJoin:
         fallback_batches = list(_blocks(uncertain, self.config.expensive_batch_size))
         fallback_started = time.perf_counter()
         for batch_index, batch in enumerate(fallback_batches, 1):
-            metrics.expensive_calls += 1
-            metrics.fallback_expensive_calls += 1
-            call_started = time.perf_counter()
-            try:
-                expensive_accepted.update(
-                    self.expensive_classify(batch, predicate)
-                )
-            except Exception:
-                metrics.expensive_seconds += time.perf_counter() - call_started
-                metrics.expensive_failures += 1
-                _print_progress(
-                    "Batch-wise cascade expensive fallback",
-                    batch_index,
-                    len(fallback_batches),
-                    fallback_started,
-                )
-                continue
-            metrics.expensive_seconds += time.perf_counter() - call_started
+            batch_accepts, _decided = self._expensive_decide(batch, predicate, metrics)
+            expensive_accepted.update(batch_accepts)
             _print_progress(
                 "Batch-wise cascade expensive fallback",
                 batch_index,
@@ -393,51 +397,84 @@ class CascadeJoin:
         ]
         return _deduplicate(rows), decisions, metrics
 
+    def _expensive_decide(
+        self,
+        batch: list[Candidate],
+        predicate: str,
+        metrics: CascadeMetrics,
+        calibration: bool = False,
+    ) -> tuple[set[int], set[int]]:
+        """Classify ``batch`` with the expensive model; returns (accepted ids, decided ids).
+
+        A batch response can be unusable (the prompt overflowed the context window and
+        the model omitted candidate ids, or the reply was malformed). Dropping the whole
+        batch would silently discard every candidate in it, so a failed batch is split in
+        two and each half retried, down to single candidates. Every attempt is counted as
+        an expensive call and its time is charged, so retries are not free.
+        """
+        metrics.expensive_calls += 1
+        if calibration:
+            metrics.calibration_expensive_calls += 1
+        else:
+            metrics.fallback_expensive_calls += 1
+        started = time.perf_counter()
+        try:
+            accepts = self.expensive_classify(batch, predicate)
+        except Exception:
+            metrics.expensive_seconds += time.perf_counter() - started
+            metrics.expensive_failures += 1
+            if len(batch) == 1:
+                metrics.expensive_undecided += 1
+                return set(), set()
+            middle = len(batch) // 2
+            left_accepts, left_decided = self._expensive_decide(
+                batch[:middle], predicate, metrics, calibration
+            )
+            right_accepts, right_decided = self._expensive_decide(
+                batch[middle:], predicate, metrics, calibration
+            )
+            return left_accepts | right_accepts, left_decided | right_decided
+        metrics.expensive_seconds += time.perf_counter() - started
+        ids = {candidate.candidate_id for candidate in batch}
+        return accepts & ids, ids
+
     def _learn_confidence_threshold(
         self,
         scored: list[tuple[Candidate, float | None, str]],
         predicate: str,
         metrics: CascadeMetrics,
+        calibration_oracle: dict[int, bool] | None = None,
     ) -> tuple[float, float]:
-        """Calibrate the accept/reject band via Beta-posterior credible bounds
-        (fit_cascade_threshold), using the expensive model as a weak oracle on a
-        calibration sample. This is the paper's sec:cascade-math procedure; see
-        threshold_fit.py for the Beta(1,1)-credible-lower-bound fit itself."""
-        calibration_candidates = _calibration_sample(
-            scored,
+        """Fit the accept/reject band against expensive-model labels.
+
+        Paper sec:cascade-math: the reject side is certified by a Beta credible
+        lower bound on recall, the accept side on precision. The labelled sample
+        is stratified by cheap score and band_fit.fit_band turns it into those
+        bounds. Every labelled pair keeps its oracle answer
+        (``calibration_oracle``), so the expensive call is not repeated.
+        """
+        usable = [(candidate, score) for candidate, score, _ in scored if score is not None]
+        pool_scores = [score for _candidate, score in usable]
+        picks = stratified_sample(
+            pool_scores,
             self.config.calibration_budget,
+            self.config.calibration_strata,
+            _calibration_rng(),
         )
-        if not calibration_candidates:
+        if not picks:
             return math.inf, -math.inf
-        scores_by_id = {
-            candidate.candidate_id: score
-            for candidate, score, _ in scored
-            if score is not None
-        }
-        calibration_scores: list[float] = []
-        calibration_labels: list[int] = []
+        calibration_candidates = [usable[pick][0] for pick in picks]
+        pick_of = {usable[pick][0].candidate_id: pick for pick in picks}
+        labels: dict[int, int] = {}
         calibration_batches = list(
             _blocks(calibration_candidates, self.config.expensive_batch_size)
         )
         calibration_started = time.perf_counter()
         for batch_index, batch in enumerate(calibration_batches, 1):
             metrics.calibration_candidates += len(batch)
-            metrics.calibration_expensive_calls += 1
-            metrics.expensive_calls += 1
-            call_started = time.perf_counter()
-            try:
-                oracle_accepts = self.expensive_classify(batch, predicate)
-            except Exception:
-                metrics.expensive_seconds += time.perf_counter() - call_started
-                metrics.expensive_failures += 1
-                _print_progress(
-                    "Batch-wise cascade threshold calibration",
-                    batch_index,
-                    len(calibration_batches),
-                    calibration_started,
-                )
-                continue
-            metrics.expensive_seconds += time.perf_counter() - call_started
+            oracle_accepts, decided = self._expensive_decide(
+                batch, predicate, metrics, calibration=True
+            )
             _print_progress(
                 "Batch-wise cascade threshold calibration",
                 batch_index,
@@ -446,45 +483,41 @@ class CascadeJoin:
             )
             metrics.calibration_expensive_accepts += len(oracle_accepts)
             for candidate in batch:
-                score = scores_by_id.get(candidate.candidate_id)
-                if score is None:
+                if candidate.candidate_id not in decided:
                     continue
-                calibration_scores.append(score)
-                calibration_labels.append(
-                    1 if candidate.candidate_id in oracle_accepts else 0
-                )
+                accepted = candidate.candidate_id in oracle_accepts
+                labels[pick_of[candidate.candidate_id]] = 1 if accepted else 0
+                if calibration_oracle is not None:
+                    calibration_oracle[candidate.candidate_id] = accepted
 
-        if not calibration_scores:
+        if not labels:
             metrics.calibration_agreement = 0.0
             metrics.calibration_activated = False
             return math.inf, -math.inf
 
-        result = fit_cascade_threshold(
-            predicate,
-            calibration_scores,
-            calibration_labels,
-            accept_precision_target=self.config.cascade_target,
-            reject_precision_target=self.config.cascade_target,
+        fit = fit_band(
+            pool_scores,
+            labels,
+            quality_target=self.config.cascade_target,
             credible_level=self.config.credible_level,
+            n_strata=self.config.calibration_strata,
         )
-        metrics.calibration_accept_precision_lower = result.accept_precision_lower
-        metrics.calibration_reject_precision_lower = result.reject_precision_lower
+        metrics.calibration_accept_precision_lower = fit.accept_precision_lower
+        metrics.calibration_reject_recall_lower = fit.reject_recall_lower
 
         selected = [
-            (score >= result.cheap_accept_threshold) or (score <= result.cheap_reject_threshold)
-            for score in calibration_scores
+            (pool_scores[pick] >= fit.accept_threshold) or (pool_scores[pick] <= fit.reject_threshold)
+            for pick in labels
         ]
         selected_count = sum(selected)
         agreed = sum(
             1
-            for score, label, is_selected in zip(calibration_scores, calibration_labels, selected)
-            if is_selected and int(score >= 0) == label
+            for (pick, label), is_selected in zip(labels.items(), selected)
+            if is_selected and int(pool_scores[pick] >= 0) == label
         )
         metrics.calibration_agreement = agreed / selected_count if selected_count else 0.0
-        metrics.calibration_activated = (
-            result.cheap_accept_threshold < math.inf or result.cheap_reject_threshold > -math.inf
-        )
-        return result.cheap_accept_threshold, result.cheap_reject_threshold
+        metrics.calibration_activated = fit.activated
+        return fit.accept_threshold, fit.reject_threshold
 
 
 def exact_id_candidates(
@@ -894,44 +927,6 @@ def _calibration_rng() -> "random.Random | None":
     if not raw or raw.lower() == "none":
         return None
     return random.Random(raw)
-
-
-def _calibration_sample(
-    scored: list[tuple[Candidate, float | None, str]],
-    budget: int,
-) -> list[Candidate]:
-    if budget <= 0:
-        return []
-    eligible = [
-        (candidate, abs(score))
-        for candidate, score, _ in scored
-        if score is not None
-    ]
-    if len(eligible) <= budget:
-        return [candidate for candidate, _ in eligible]
-    ranked = sorted(eligible, key=lambda item: (-item[1], item[0].candidate_id))
-    if budget == 1:
-        return [ranked[0][0]]
-    rng = _calibration_rng()
-    selected: list[Candidate] = []
-    selected_ids: set[int] = set()
-    for index in range(budget):
-        if rng is None:
-            rank = round(index * (len(ranked) - 1) / (budget - 1))
-        else:
-            # One draw per contiguous stratum: same coverage of the confidence
-            # range as the deterministic pick, but the specific items vary.
-            low = index * len(ranked) // budget
-            high = (index + 1) * len(ranked) // budget
-            if high <= low:
-                continue
-            rank = rng.randrange(low, high)
-        candidate = ranked[rank][0]
-        if candidate.candidate_id in selected_ids:
-            continue
-        selected.append(candidate)
-        selected_ids.add(candidate.candidate_id)
-    return selected
 
 
 

@@ -7,10 +7,10 @@ AKER_HOST="${AKER_HOST:-remizova@aker.imag.fr}"
 AKER_ROOT="${AKER_ROOT:-/home/daisy/remizova/lab_m2_benchmarks}"
 
 IMPLEMENTATIONS=(
-  "project SUQL/baseline"
-  "project SUQL/v1"
-  "project Trummer/baseline"
-  "project Trummer/v1"
+  "approaches/project SUQL/baseline"
+  "approaches/project SUQL/v1"
+  "approaches/project Trummer/baseline"
+  "approaches/project Trummer/v1"
 )
 for relative in "${IMPLEMENTATIONS[@]}"; do
   [[ -d "$LAB_ROOT/$relative" ]] || { echo "ERROR: missing $LAB_ROOT/$relative" >&2; exit 1; }
@@ -34,7 +34,7 @@ remote_path() { printf "%s:%q" "$AKER_HOST" "$1"; }
 # multi_model_experiments holds results pulled back down from the cluster;
 # pushing them up again is pure waste. .venv matters because semantic_dict/
 # carries a ~900MB virtualenv that times the transfer out.
-rsync -av --delete --exclude outputs/ --exclude logs/ --exclude jobs/ \
+rsync -av --delete --exclude outputs/ --exclude logs/ --exclude jobs/ --exclude probes/ \
   --exclude .mplconfig/ --exclude __pycache__/ --exclude .venv/ \
   --exclude multi_model_experiments/ \
   "$HERE/" "$(remote_path "$AKER_ROOT/benchmarks/")"

@@ -89,8 +89,8 @@ class _MockOllama(BaseHTTPRequestHandler):
 
 
 def _movies_and_reviews(n: int) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    movies = [{"movie_id": f"m{i}", "text": f"Movie {i}"} for i in range(n)]
-    reviews = [{"tconst": f"m{i}", "text": f"Review text {i}"} for i in range(n)]
+    movies = [{"product_id": f"m{i}", "text": f"Product {i}"} for i in range(n)]
+    reviews = [{"product_id": f"m{i}", "text": f"Review text {i}"} for i in range(n)]
     return movies, reviews
 
 
@@ -128,7 +128,7 @@ class TestCascadeJoinEndToEnd(unittest.TestCase):
 
         rows, decisions, metrics = self._run(movies, reviews, budget=40)
 
-        self.assertEqual({row["movie_id"] for row in rows}, {f"m{i - 1}" for i in range(1, 61)})
+        self.assertEqual({row["product_id"] for row in rows}, {f"m{i - 1}" for i in range(1, 61)})
         self.assertTrue(metrics.calibration_activated)
         self.assertIsNotNone(metrics.learned_accept_threshold)
         self.assertIsNotNone(metrics.learned_reject_threshold)
@@ -154,7 +154,7 @@ class TestCascadeJoinEndToEnd(unittest.TestCase):
         rows, decisions, metrics = self._run(movies, reviews, budget=40)
 
         expected = {f"m{i - 1}" for i in range(1, 161) if _MockOllama.oracle_accepts[i]}
-        self.assertEqual({row["movie_id"] for row in rows}, expected)
+        self.assertEqual({row["product_id"] for row in rows}, expected)
         self.assertGreater(metrics.expensive_candidates, 0)
         self.assertTrue(any(d.route == "expensive" for d in decisions))
         # No pair is paid for twice.
@@ -177,7 +177,7 @@ class TestCascadeJoinEndToEnd(unittest.TestCase):
         finally:
             _MockOllama.max_pairs = None
 
-        self.assertEqual({row["movie_id"] for row in rows}, {f"m{i - 1}" for i in range(1, 11)})
+        self.assertEqual({row["product_id"] for row in rows}, {f"m{i - 1}" for i in range(1, 11)})
         self.assertGreater(metrics.expensive_failures, 0)
         self.assertEqual(metrics.expensive_undecided, 0)
         # Retries are real calls and must be counted.
@@ -194,7 +194,7 @@ class TestCascadeJoinEndToEnd(unittest.TestCase):
 
         rows, _decisions, metrics = self._run(movies, reviews, budget=20)
 
-        self.assertEqual({row["movie_id"] for row in rows}, {"m5", "m17"})
+        self.assertEqual({row["product_id"] for row in rows}, {"m5", "m17"})
         self.assertFalse(metrics.calibration_activated)
         self.assertEqual(metrics.cheap_early_rejects, 0)
 

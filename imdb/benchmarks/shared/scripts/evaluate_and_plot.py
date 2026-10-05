@@ -10,15 +10,16 @@ from pathlib import Path
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 
 
 LABELS = {
     "suql_baseline": "SUQL baseline",
-    "suql_v1_two_level_cascade": "SUQL V1 (2-level cascade)",
+    "suql_v1_two_level_cascade": "CasSuql",
     "trummer_baseline_adaptive_block_join": "Trummer baseline",
-    "trummer_v1_structured_two_level_cascade": "Trummer V1 (structured + 2-level cascade)",
+    "trummer_v1_structured_two_level_cascade": "CasTrummer",
 }
 COLORS = {"precision": "#4c78a8", "recall": "#f58518", "f1": "#6f5bd3"}
 DEFAULT_ACCELERATOR_USD_PER_HOUR = 3.0
@@ -51,6 +52,27 @@ def plot_quality(frame: pd.DataFrame, path: Path, title: str) -> None:
     fig.tight_layout(); fig.savefig(path, dpi=180); plt.close(fig)
 
 
+def annotate_stack_shares(ax, x, cheap, expensive, min_pct: float = 4.0) -> None:
+    """Label each stacked segment with its share of that bar's total.
+
+    Skipped below `min_pct` since a sliver too thin to see is also too thin
+    to hold legible text -- the total-per-bar label above still accounts for it.
+    Accepts either a pandas Series or a numpy array for `cheap`/`expensive`.
+    """
+    cheap = np.asarray(cheap, dtype=float); expensive = np.asarray(expensive, dtype=float)
+    totals = cheap + expensive
+    for i, total in enumerate(totals):
+        if total <= 0:
+            continue
+        c, e = cheap[i], expensive[i]
+        if c > 0 and (c / total * 100) >= min_pct:
+            ax.text(x[i], c / 2, f"{c/total*100:.0f}%", ha="center", va="center",
+                     color="white", fontsize=9, fontweight="bold", zorder=4)
+        if e > 0 and (e / total * 100) >= min_pct:
+            ax.text(x[i], c + e / 2, f"{e/total*100:.0f}%", ha="center", va="center",
+                     color="white", fontsize=9, fontweight="bold", zorder=4)
+
+
 def plot_stacked(frame: pd.DataFrame, path: Path, title: str, kind: str) -> None:
     methods = list(frame["method"]); x = np.arange(len(methods))
     if kind == "time":
@@ -60,10 +82,11 @@ def plot_stacked(frame: pd.DataFrame, path: Path, title: str, kind: str) -> None
         cheap, expensive = frame["cheap_calls"], frame["expensive_calls"]
         ylabel, suffix = "Mean LLM calls (lower is better)", " calls"
     fig, ax = plt.subplots(figsize=(max(9, len(methods)*1.8), 6))
-    ax.bar(x, cheap, label="Cheap model", color="#4c9f70")
-    ax.bar(x, expensive, bottom=cheap, label="Expensive model", color="#d95f02")
+    ax.bar(x, cheap, label="Cheap model", color="#4c9f70", zorder=3)
+    ax.bar(x, expensive, bottom=cheap, label="Expensive model", color="#d95f02", zorder=3)
     totals = cheap + expensive
     for i, total in enumerate(totals): ax.text(i, total, f"total {total:.1f}{suffix}", ha="center", va="bottom")
+    annotate_stack_shares(ax, x, cheap, expensive)
     ax.set(title=f"{title}: cheap vs expensive model {kind}", ylabel=ylabel)
     ax.set_xticks(x, methods, rotation=12, ha="right"); ax.legend(); ax.grid(axis="y", alpha=.25)
     fig.tight_layout(); fig.savefig(path, dpi=180); plt.close(fig)
@@ -116,8 +139,9 @@ def plot_costs(frame: pd.DataFrame, path: Path, title: str, hourly_rate: float) 
     cheap = frame["cheap_cost_usd"].to_numpy(float)
     expensive = frame["expensive_cost_usd"].to_numpy(float)
     fig, ax = plt.subplots(figsize=(max(10, len(methods) * 2.1), 6.5))
-    ax.bar(x, cheap, label="Cheap-model calls", color="#4c9f70")
-    ax.bar(x, expensive, bottom=cheap, label="Expensive-model calls", color="#d95f02")
+    ax.bar(x, cheap, label="Cheap-model calls", color="#4c9f70", zorder=3)
+    ax.bar(x, expensive, bottom=cheap, label="Expensive-model calls", color="#d95f02", zorder=3)
+    annotate_stack_shares(ax, x, cheap, expensive)
     for i, row in frame.reset_index(drop=True).iterrows():
         ax.text(i, row.total_cost_usd, f"${row.total_cost_usd:.4f}", ha="center", va="bottom", fontsize=9)
         details = []
@@ -143,21 +167,40 @@ def plot_cost_f1(frame: pd.DataFrame, path: Path, title: str, hourly_rate: float
         if not any(j != i and costs[j] <= costs[i] and f1[j] >= f1[i]
                    and (costs[j] < costs[i] or f1[j] > f1[i]) for j in range(len(frame)))
     ]
+    # A linear cost axis compresses every point into a sliver when one method's
+    # cost is an order of magnitude apart from the rest, which is exactly the
+    # regime this benchmark tends to produce (an uncascaded cheap stage can be
+    # 10-30x pricier than everything else). Switch to a log axis whenever costs
+    # span more than a decade so all points -- not just the outlier -- are legible.
+    positive_costs = costs[costs > 0]
+    use_log = len(positive_costs) > 0 and positive_costs.max() / positive_costs.min() >= 10
+
     fig, ax = plt.subplots(figsize=(10, 6.5))
     for i, row in frame.reset_index(drop=True).iterrows():
         ax.scatter(row.total_cost_usd, row.f1, s=190, color=COLORS["f1"], alpha=.8,
-                   edgecolor="black" if i in pareto else "white", linewidth=3 if i in pareto else 1)
+                   edgecolor="black" if i in pareto else "white", linewidth=3 if i in pareto else 1,
+                   zorder=3)
         ax.annotate(f"{row.method}\n${row.total_cost_usd:.4f}, F1 {row.f1:.3f}",
                     (row.total_cost_usd, row.f1), xytext=(7, 7), textcoords="offset points", fontsize=8)
     frontier = sorted(pareto, key=lambda i: costs[i])
     if len(frontier) > 1:
-        ax.plot(costs[frontier], f1[frontier], "--", color="#333333", alpha=.6, label="Cost–F1 Pareto frontier")
+        ax.plot(costs[frontier], f1[frontier], "--", color="#333333", alpha=.6,
+                 label="Cost–F1 Pareto frontier", zorder=2)
         ax.legend()
-    ax.set(title=f"{title}: cost vs F1", xlabel="Estimated cost per question (USD; lower is better)",
-           ylabel="F1 (higher is better)", ylim=(-.03, 1.03))
-    ax.grid(alpha=.25)
-    fig.text(.5, .01, f"Black outlines are non-dominated choices. Compute estimate uses ${hourly_rate:.2f}/accelerator-hour.",
-             ha="center", fontsize=8)
+    if use_log:
+        ax.set_xscale("log")
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"${x:g}"))
+        ax.xaxis.set_minor_formatter(mticker.NullFormatter())
+        xlabel = "Estimated cost per question (USD, log scale; lower is better)"
+    else:
+        xlabel = "Estimated cost per question (USD; lower is better)"
+    ax.margins(x=0.2)
+    ax.set(title=f"{title}: cost vs F1", xlabel=xlabel, ylabel="F1 (higher is better)", ylim=(-.03, 1.03))
+    ax.grid(alpha=.25, which="both" if use_log else "major")
+    caption = f"Black outlines are non-dominated choices. Compute estimate uses ${hourly_rate:.2f}/accelerator-hour."
+    if use_log:
+        caption += " X-axis is log-scaled because costs span more than 10x."
+    fig.text(.5, .01, caption, ha="center", fontsize=8)
     fig.tight_layout(rect=(0, .04, 1, 1)); fig.savefig(path, dpi=180); plt.close(fig)
 
 

@@ -28,7 +28,7 @@ def main() -> None:
     parser.add_argument("--expensive-model", default="ollama/gemma4:26b")
     parser.add_argument("--structured-parser-model")
     parser.add_argument("--disable-llm-structured-parser", action="store_true")
-    parser.add_argument("--cascade-target", type=float, default=0.9)
+    parser.add_argument("--cascade-target", type=float, default=0.8)
     parser.add_argument("--calibration-budget", type=int, default=20)
     parser.add_argument("--manual-confidence-threshold", type=float)
     parser.add_argument("--cheap-batch-size", type=int, default=8)

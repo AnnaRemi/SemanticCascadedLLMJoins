@@ -15,6 +15,7 @@ import numpy as np
 
 from semantic_dict_context import semantic_guideline
 
+from band_fit import DEFAULT_STRATA, fit_band, stratified_sample
 from profiler import fit_cascade_threshold
 from scorer import OllamaLogOddsScorer
 
@@ -28,9 +29,10 @@ DEFAULT_EXPENSIVE_MODEL = os.environ.get(
 DEFAULT_CHEAP_ACCEPT_FLOOR = float(os.environ.get("SUQL_CHEAP_ACCEPT_FLOOR", "4.0"))
 DEFAULT_CHEAP_MIN_DECISION_RATE = float(os.environ.get("SUQL_CHEAP_MIN_DECISION_RATE", "0.3"))
 DEFAULT_CHEAP_MIN_PROBES = int(os.environ.get("SUQL_CHEAP_MIN_PROBES", "5"))
-DEFAULT_CASCADE_TARGET = float(os.environ.get("SUQL_CASCADE_TARGET", "0.9"))
+DEFAULT_CASCADE_TARGET = float(os.environ.get("SUQL_CASCADE_TARGET", "0.8"))
 DEFAULT_CALIBRATION_BUDGET = int(os.environ.get("SUQL_CALIBRATION_BUDGET", "20"))
 DEFAULT_CREDIBLE_LEVEL = float(os.environ.get("SUQL_CREDIBLE_LEVEL", "0.9"))
+DEFAULT_CALIBRATION_STRATA = int(os.environ.get("SUQL_CALIBRATION_STRATA", str(DEFAULT_STRATA)))
 DEFAULT_MANUAL_CONFIDENCE_THRESHOLD = os.environ.get("SUQL_MANUAL_CONFIDENCE_THRESHOLD")
 DEFAULT_REQUEST_RETRIES = int(os.environ.get("SUQL_REQUEST_RETRIES", "3"))
 EXPENSIVE_THINK = os.environ.get("EXPENSIVE_THINK", "0") == "1"
@@ -95,6 +97,8 @@ class CascadeStats:
     calibration_labelled_count: int = 0
     calibration_accept_precision_lower: float = 0.0
     calibration_reject_precision_lower: float = 0.0
+    calibration_reject_recall_lower: float = 0.0
+    calibration_reused_labels: int = 0
     calibration_activated: bool = False
     learned_accept_threshold: float | None = None
     learned_reject_threshold: float | None = None
@@ -127,6 +131,13 @@ class CascadeStats:
                 "calibration_labelled_count": 0,
                 "calibration_accept_precision_lower": 0.0,
                 "calibration_reject_precision_lower": 0.0,
+                "calibration_reject_recall_lower": 0.0,
+                "calibration_reused_labels": 0,
+                "calibration_estimator": "",
+                "cheap_score_mode": "",
+                "calibration_strata_sizes": [],
+                "calibration_strata_labelled": [],
+                "calibration_strata_positives": [],
                 "calibration_activated": False,
                 "ground_truth_calibration_skipped_reason": "",
                 "cascade_target": None,
@@ -179,6 +190,8 @@ class CascadeStats:
             "calibration_labelled_count": self.calibration_labelled_count,
             "calibration_accept_precision_lower": self.calibration_accept_precision_lower,
             "calibration_reject_precision_lower": self.calibration_reject_precision_lower,
+            "calibration_reject_recall_lower": self.calibration_reject_recall_lower,
+            "calibration_reused_labels": self.calibration_reused_labels,
             "calibration_activated": self.calibration_activated,
             "learned_accept_threshold": self.learned_accept_threshold,
             "learned_reject_threshold": self.learned_reject_threshold,
@@ -201,6 +214,7 @@ class CascadeAnswerFilter:
     cascade_target: float = DEFAULT_CASCADE_TARGET
     calibration_budget: int = DEFAULT_CALIBRATION_BUDGET
     credible_level: float = DEFAULT_CREDIBLE_LEVEL
+    calibration_strata: int = DEFAULT_CALIBRATION_STRATA
     ground_truth_ids: frozenset[str] | None = None
     manual_confidence_threshold: float | None = (
         float(DEFAULT_MANUAL_CONFIDENCE_THRESHOLD)
@@ -222,6 +236,7 @@ class CascadeAnswerFilter:
         self.cascade_target = float(self.cascade_target)
         self.calibration_budget = int(self.calibration_budget)
         self.credible_level = float(self.credible_level)
+        self.calibration_strata = int(self.calibration_strata)
         self.request_retries = max(1, int(self.request_retries))
         if not 0.0 < self.cascade_target <= 1.0:
             raise ValueError("cascade_target must be in (0, 1]")
@@ -229,6 +244,8 @@ class CascadeAnswerFilter:
             raise ValueError("calibration_budget must be non-negative")
         if not 0.0 < self.credible_level < 1.0:
             raise ValueError("credible_level must be in (0, 1)")
+        if self.calibration_strata < 2:
+            raise ValueError("calibration_strata must be at least 2")
         if self.ground_truth_ids is not None:
             self.ground_truth_ids = frozenset(str(x) for x in self.ground_truth_ids)
         if self.manual_confidence_threshold is not None:
@@ -337,8 +354,12 @@ class CascadeAnswerFilter:
 
             scored.append((index, review_text, score, ids[index]))
 
+        usage["cheap_score_mode"] = getattr(self.cheap_scorer, "score_mode", "")
+        calibration_answers: dict[int, str] = {}
         if self.manual_confidence_threshold is None:
-            accept_threshold, reject_threshold = self._learn_confidence_threshold(scored, question, usage)
+            accept_threshold, reject_threshold = self._learn_confidence_threshold(
+                scored, question, usage, calibration_answers
+            )
         else:
             accept_threshold, reject_threshold = (
                 self.manual_confidence_threshold,
@@ -373,6 +394,16 @@ class CascadeAnswerFilter:
             usage.get("calibration_activated", self.stats.calibration_activated)
         )
 
+        # Rows the oracle already labelled during calibration carry the expensive
+        # model's answer; use it instead of routing (and paying for) them again.
+        for index, review_text, _score, _row_id in scored:
+            answer = calibration_answers.get(index)
+            if answer is not None:
+                self.cache[self._cache_key(review_text, question)] = answer
+                results[index] = answer
+        usage["calibration_reused_labels"] = int(usage["calibration_reused_labels"]) + len(calibration_answers)
+        self.stats.calibration_reused_labels += len(calibration_answers)
+
         for index, review_text, score, _row_id in scored:
             if results[index] is not None:
                 continue
@@ -399,6 +430,7 @@ class CascadeAnswerFilter:
         scored: list[tuple[int, str, float, str | None]],
         question: str,
         usage: dict[str, object],
+        calibration_answers: dict[int, str] | None = None,
     ) -> tuple[float, float]:
         use_ground_truth = self.ground_truth_ids is not None and all(
             row_id for *_rest, row_id in scored
@@ -412,34 +444,40 @@ class CascadeAnswerFilter:
             # modes per-row, fall back to the oracle path entirely.
             usage["ground_truth_calibration_skipped_reason"] = "row_ids unavailable"
         usage["calibration_mode"] = "oracle"
-        return self._learn_threshold_from_oracle(scored, question, usage)
+        return self._learn_threshold_from_oracle(scored, question, usage, calibration_answers)
 
     def _learn_threshold_from_oracle(
         self,
         scored: list[tuple[int, str, float, str | None]],
         question: str,
         usage: dict[str, object],
+        calibration_answers: dict[int, str] | None = None,
     ) -> tuple[float, float]:
-        """Calibrate the accept/reject band via Beta-posterior credible bounds
-        (fit_cascade_threshold), using the expensive model as a weak oracle on a
-        calibration sample. This is the paper's sec:cascade-math procedure; see
-        profiler.py for the Beta(1,1)-credible-lower-bound fit itself."""
-        calibration_items = _calibration_sample(
-            [(index, review_text, score) for index, review_text, score, _row_id in scored],
-            self.calibration_budget,
-        )
-        if not calibration_items:
+        """Fit the accept/reject band against expensive-model labels.
+
+        Follows paper sec:cascade-math: the reject side is certified by a Beta
+        credible lower bound on *recall* (tau_-), the accept side on *precision*
+        (tau_+). The labelled sample is stratified by cheap score and the
+        stratified posterior in band_fit.py turns it into those bounds. Every
+        labelled row keeps its oracle answer (``calibration_answers``) so the
+        expensive calls spent here are not repeated.
+        """
+        usage["calibration_estimator"] = "stratified_beta_mc"
+        pool_scores = [score for _index, _text, score, _row_id in scored]
+        raw_seed = os.environ.get("CALIBRATION_SEED", "").strip()
+        rng = random.Random(raw_seed) if raw_seed and raw_seed.lower() != "none" else None
+        picks = stratified_sample(pool_scores, self.calibration_budget, self.calibration_strata, rng)
+        if not picks:
             usage["calibration_agreement"] = 0.0
             usage["calibration_activated"] = False
             self.stats.calibration_agreement = 0.0
             return math.inf, -math.inf
 
-        scores: list[float] = []
-        labels: list[int] = []
-        self.stats.calibration_candidates += len(calibration_items)
-        usage["calibration_candidates"] = int(usage["calibration_candidates"]) + len(calibration_items)
-        usage["calibration_labelled_count"] = len(calibration_items)
-        for _index, review_text, score in calibration_items:
+        labels: dict[int, int] = {}
+        self.stats.calibration_candidates += len(picks)
+        usage["calibration_candidates"] = int(usage["calibration_candidates"]) + len(picks)
+        for pick in picks:
+            index, review_text, _score, _row_id = scored[pick]
             self.stats.calibration_expensive_calls += 1
             usage["calibration_expensive_calls"] = int(usage["calibration_expensive_calls"]) + 1
             oracle = self.expensive_answer(review_text, question)
@@ -449,43 +487,47 @@ class CascadeAnswerFilter:
             if oracle_label:
                 self.stats.calibration_expensive_accepts += 1
                 usage["calibration_expensive_accepts"] = int(usage["calibration_expensive_accepts"]) + 1
-            scores.append(score)
-            labels.append(1 if oracle_label else 0)
+            labels[pick] = 1 if oracle_label else 0
+            if calibration_answers is not None:
+                calibration_answers[index] = "Yes" if oracle_label else "No"
+        usage["calibration_labelled_count"] = len(labels)
 
-        if not scores:
+        if not labels:
             usage["calibration_agreement"] = 0.0
             usage["calibration_activated"] = False
             self.stats.calibration_agreement = 0.0
             return math.inf, -math.inf
 
-        result = fit_cascade_threshold(
-            question,
-            np.asarray(scores, dtype=float),
-            np.asarray(labels, dtype=int),
-            accept_precision_target=self.cascade_target,
-            reject_precision_target=self.cascade_target,
+        fit = fit_band(
+            pool_scores,
+            labels,
+            quality_target=self.cascade_target,
             credible_level=self.credible_level,
+            n_strata=self.calibration_strata,
         )
-        usage["calibration_accept_precision_lower"] = result.accept_precision_lower
-        usage["calibration_reject_precision_lower"] = result.reject_precision_lower
+        usage["calibration_accept_precision_lower"] = fit.accept_precision_lower
+        usage["calibration_reject_recall_lower"] = fit.reject_recall_lower
+        usage["calibration_strata_sizes"] = list(fit.strata_sizes)
+        usage["calibration_strata_labelled"] = list(fit.strata_labelled)
+        usage["calibration_strata_positives"] = list(fit.strata_positives)
+        self.stats.calibration_accept_precision_lower = fit.accept_precision_lower
+        self.stats.calibration_reject_recall_lower = fit.reject_recall_lower
 
         selected = [
-            (score >= result.cheap_accept_threshold) or (score <= result.cheap_reject_threshold)
-            for score in scores
+            (pool_scores[pick] >= fit.accept_threshold) or (pool_scores[pick] <= fit.reject_threshold)
+            for pick in labels
         ]
         selected_count = sum(selected)
         agreed = sum(
             1
-            for score, label, is_selected in zip(scores, labels, selected)
-            if is_selected and int(score >= 0) == label
+            for (pick, label), is_selected in zip(labels.items(), selected)
+            if is_selected and int(pool_scores[pick] >= 0) == label
         )
         agreement = agreed / selected_count if selected_count else 0.0
         self.stats.calibration_agreement = agreement
         usage["calibration_agreement"] = agreement
-        usage["calibration_activated"] = (
-            result.cheap_accept_threshold < math.inf or result.cheap_reject_threshold > -math.inf
-        )
-        return result.cheap_accept_threshold, result.cheap_reject_threshold
+        usage["calibration_activated"] = fit.activated
+        return fit.accept_threshold, fit.reject_threshold
 
     def _learn_threshold_from_ground_truth(
         self,
@@ -640,47 +682,6 @@ def _http_error_message(exc: httpx.HTTPStatusError) -> str:
         f"Ollama request failed with HTTP {exc.response.status_code} "
         f"for {exc.request.url}{suffix}"
     )
-
-
-def _calibration_sample(
-    scored: list[tuple[int, str, float]],
-    budget: int,
-) -> list[tuple[int, str, float]]:
-    if budget <= 0:
-        return []
-    eligible = [(index, review_text, score, abs(score)) for index, review_text, score in scored]
-    if len(eligible) <= budget:
-        return [(index, review_text, score) for index, review_text, score, _confidence in eligible]
-    ranked = sorted(eligible, key=lambda item: (-item[3], item[0]))
-    if budget == 1:
-        index, review_text, score, _confidence = ranked[0]
-        return [(index, review_text, score)]
-
-    # CALIBRATION_SEED is set per repetition by repetitions.py. Every LLM call
-    # runs at temperature 0, so this draw is the only step that can legitimately
-    # differ between repetitions; unset (or 'none') keeps the deterministic pick.
-    raw_seed = os.environ.get("CALIBRATION_SEED", "").strip()
-    rng = random.Random(raw_seed) if raw_seed and raw_seed.lower() != "none" else None
-
-    selected: list[tuple[int, str, float]] = []
-    selected_indexes: set[int] = set()
-    for sample_index in range(budget):
-        if rng is None:
-            rank = round(sample_index * (len(ranked) - 1) / (budget - 1))
-        else:
-            # One draw per contiguous stratum: same coverage of the confidence
-            # range as the deterministic pick, but the specific items vary.
-            low = sample_index * len(ranked) // budget
-            high = (sample_index + 1) * len(ranked) // budget
-            if high <= low:
-                continue
-            rank = rng.randrange(low, high)
-        index, review_text, score, _confidence = ranked[rank]
-        if index in selected_indexes:
-            continue
-        selected.append((index, review_text, score))
-        selected_indexes.add(index)
-    return selected
 
 
 def _normalised_yes_no(value: str) -> bool | None:

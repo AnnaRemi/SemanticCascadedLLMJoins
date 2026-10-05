@@ -23,6 +23,30 @@ from common import (
 )
 
 
+_STRUCTURED_OP_TO_SQL = {
+    "contains": lambda column, value: f"{column} LIKE '%{value}%'",
+}
+
+
+def _suql_query(spec: dict) -> str:
+    """Amazon's catalog (unlike IMDb's) never bakes a hand-authored SUQL string
+    into benchmark.json, so build one from structured_predicates + semantic_question."""
+    existing = spec.get("suql_query")
+    if existing:
+        return existing
+    clauses = []
+    for predicate in spec.get("structured_predicates", []):
+        column, op, value = predicate["column"], predicate["op"], predicate["value"]
+        if op not in _STRUCTURED_OP_TO_SQL:
+            raise ValueError(f"Unsupported structured predicate op for SUQL synthesis: {op}")
+        clauses.append(_STRUCTURED_OP_TO_SQL[op](column, value))
+    where = " AND ".join(clauses) if clauses else "1=1"
+    return (
+        "SELECT product_id, title, brand, category, price FROM products "
+        f"WHERE {where} AND answer(review, '{spec['semantic_question']}') = 'Yes';"
+    )
+
+
 def run_suql_baseline(args: argparse.Namespace, spec: dict, output_dir: Path) -> dict:
     engine_dir = APPROACH_ROOT / "project SUQL" / "baseline"
     metrics_path = output_dir / "engine_metrics.json"
@@ -39,7 +63,7 @@ def run_suql_baseline(args: argparse.Namespace, spec: dict, output_dir: Path) ->
     started_cpu = cpu_seconds()
     started_wall = time.perf_counter()
     results = suql_engine.ask_with_suql(
-        spec["suql_query"],
+        _suql_query(spec),
         output_csv=str(output_dir / "found_rows.csv"),
         verbose=True,
     )
@@ -65,6 +89,26 @@ def run_suql_baseline(args: argparse.Namespace, spec: dict, output_dir: Path) ->
     }
 
 
+def _suql_calibration_summary(engine_metrics: dict) -> dict:
+    """Per-run calibration outcome of SUQL v1 (one semantic predicate per query).
+
+    ``cheap_score_mode`` records how the cheap scores were obtained:
+    ``native_logprobs`` means real log-odds; ``label_only`` means the server
+    returned no log-probs and every score is just +-2.
+    """
+    usages = list((engine_metrics.get("model_usage_by_question") or {}).values())
+    usage = usages[0] if usages else {}
+    return {
+        "calibration_mode": usage.get("calibration_mode", ""),
+        "calibration_activated": bool(usage.get("calibration_activated", False)),
+        "calibration_labelled_count": int(usage.get("calibration_labelled_count", 0)),
+        "calibration_reused_labels": int(usage.get("calibration_reused_labels", 0)),
+        "calibration_accept_precision_lower": float(usage.get("calibration_accept_precision_lower", 0.0)),
+        "calibration_reject_recall_lower": float(usage.get("calibration_reject_recall_lower", 0.0)),
+        "cheap_score_mode": usage.get("cheap_score_mode", ""),
+    }
+
+
 def run_suql_v1(args: argparse.Namespace, spec: dict, output_dir: Path) -> dict:
     engine_dir = APPROACH_ROOT / "project SUQL" / "v1"
     metrics_path = output_dir / "engine_metrics.json"
@@ -77,11 +121,16 @@ def run_suql_v1(args: argparse.Namespace, spec: dict, output_dir: Path) -> dict:
     os.environ["SUQL_CHEAP_MODEL"] = args.cheap_model
     os.environ["SUQL_CASCADE_TARGET"] = str(args.cascade_target)
     os.environ["SUQL_CALIBRATION_BUDGET"] = str(args.calibration_budget)
+    os.environ["SUQL_CREDIBLE_LEVEL"] = str(args.credible_level)
     os.environ["SUQL_REQUEST_TIMEOUT"] = str(args.request_timeout)
     if args.manual_confidence_threshold is None:
         os.environ.pop("SUQL_MANUAL_CONFIDENCE_THRESHOLD", None)
     else:
         os.environ["SUQL_MANUAL_CONFIDENCE_THRESHOLD"] = str(args.manual_confidence_threshold)
+    # Calibrate against expensive-model labels (as IMDb and Trummer v1 do), never
+    # against the benchmark's own ground truth: that would leak the evaluation
+    # labels into the thresholds and hand SUQL v1 its calibration labels for free.
+    os.environ.pop("SUQL_GROUND_TRUTH_IDS", None)
     os.environ["SUQL_METRICS_PATH"] = str(metrics_path)
     sys.path.insert(0, str(engine_dir))
     import suql_engine
@@ -90,7 +139,7 @@ def run_suql_v1(args: argparse.Namespace, spec: dict, output_dir: Path) -> dict:
     started_cpu = cpu_seconds()
     started_wall = time.perf_counter()
     results = suql_engine.ask_with_suql(
-        spec["suql_query"],
+        _suql_query(spec),
         output_csv=str(output_dir / "found_rows.csv"),
         verbose=True,
     )
@@ -119,6 +168,9 @@ def run_suql_v1(args: argparse.Namespace, spec: dict, output_dir: Path) -> dict:
         "calibration_expensive_calls": int(engine_metrics.get("calibration_expensive_calls", 0)),
         "calibration_expensive_accepts": int(engine_metrics.get("calibration_expensive_accepts", 0)),
         "calibration_agreement": float(engine_metrics.get("calibration_agreement", 0.0)),
+        **_suql_calibration_summary(engine_metrics),
+        "learned_accept_threshold": engine_metrics.get("learned_accept_threshold"),
+        "learned_reject_threshold": engine_metrics.get("learned_reject_threshold"),
         "final_answer_rows": int(len(results)),
         "found_product_ids": sorted(results["product_id"].astype(str).unique()),
         "structured_candidates": int(engine_metrics["structured_candidates"]),
@@ -232,7 +284,7 @@ def run_trummer_v1(args: argparse.Namespace, spec: dict, output_dir: Path) -> di
         [
             row
             for row in input_reviews
-            if str(row.get("tconst", "")) in product_ids
+            if str(row.get("product_id", "")) in product_ids
         ],
         columns=input_reviews_frame.columns,
     ).reset_index(drop=True)
@@ -323,11 +375,12 @@ def main() -> None:
     parser.add_argument("--expensive-model", default="ollama/gemma4:e4b")
     parser.add_argument("--structured-parser-model")
     parser.add_argument("--disable-llm-structured-parser", action="store_true")
-    parser.add_argument("--cascade-target", type=float, default=0.9)
+    parser.add_argument("--cascade-target", type=float, default=0.8)
+    parser.add_argument("--credible-level", type=float, default=0.9)
     parser.add_argument("--calibration-budget", type=int, default=20)
     parser.add_argument("--manual-confidence-threshold", type=float)
     parser.add_argument("--cheap-accept-threshold", type=float, default=3.0)
-    parser.add_argument("--cheap-reject-threshold", type=float, default=-1.5)
+    parser.add_argument("--cheap-reject-threshold", type=float, default=None)
     parser.add_argument("--cheap-batch-size", type=int, default=8)
     parser.add_argument("--expensive-batch-size", type=int, default=32)
     parser.add_argument("--max-expensive-calls", type=int, default=4)

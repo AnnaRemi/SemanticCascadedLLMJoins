@@ -36,7 +36,7 @@ remote_path() { printf "%s:%q" "$AKER_HOST" "$1"; }
 # multi_model_experiments holds results pulled back down from the cluster;
 # pushing them up again is pure waste. .venv matters because semantic_dict/
 # carries a ~900MB virtualenv that times the transfer out.
-rsync -av --delete --exclude outputs/ --exclude logs/ --exclude jobs/ \
+rsync -av --delete --exclude outputs/ --exclude logs/ --exclude jobs/ --exclude probes/ \
   --exclude .mplconfig/ --exclude __pycache__/ --exclude .venv/ \
   --exclude multi_model_experiments/ \
   "$HERE/" "$(remote_path "$AKER_ROOT/benchmarks/")"

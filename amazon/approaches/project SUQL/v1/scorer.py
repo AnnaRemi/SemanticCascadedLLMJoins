@@ -64,6 +64,45 @@ def _list_score(items: Iterable[dict]) -> float | None:
     return None
 
 
+def _logsumexp(values: list[float]) -> float:
+    top = max(values)
+    return top + math.log(sum(math.exp(v - top) for v in values))
+
+
+def native_log_odds(payload: dict) -> float | None:
+    """Real log-odds from Ollama's native ``logprobs`` (``/api/generate`` with
+    ``logprobs: true, top_logprobs: N``), or None when the server returned none.
+
+    Every yes-like token (1, Yes, yes, ...) and every no-like token (0, No, ...)
+    among the top alternatives of the first generated token is pooled, so the
+    score is log P(yes) - log P(no) rather than the difference of two arbitrary
+    spellings. If only one side appears in the top-N, the other side is treated
+    as the remaining probability mass (same convention as ``_single_score``).
+    """
+    entries = payload.get("logprobs")
+    if not isinstance(entries, list) or not entries or not isinstance(entries[0], dict):
+        return None
+    first = entries[0]
+    alternatives = first.get("top_logprobs") or [first]
+    yes: list[float] = []
+    no: list[float] = []
+    for item in alternatives:
+        if not isinstance(item, dict) or item.get("logprob") is None:
+            continue
+        label = _label(str(item.get("token", "")))
+        if label == "1":
+            yes.append(float(item["logprob"]))
+        elif label == "0":
+            no.append(float(item["logprob"]))
+    if yes and no:
+        return _logsumexp(yes) - _logsumexp(no)
+    if yes:
+        return _single_score("1", _logsumexp(yes))
+    if no:
+        return _single_score("0", _logsumexp(no))
+    return None
+
+
 def extract_binary_log_odds(payload: dict) -> float:
     candidates: list[object] = []
     for choice in payload.get("choices", []):
@@ -111,9 +150,32 @@ class OllamaLogOddsScorer:
         self.api_base = (api_base or DEFAULT_API_BASE).rstrip("/")
         self.timeout = timeout
         self._openai_completions_available: bool | None = None
+        self._native_logprobs_available: bool | None = None
+        # How the last score was obtained: "native_logprobs" (real log-odds),
+        # "v1_completions" or "label_only" (+-2 yes/no, no confidence at all).
+        self.score_mode = ""
 
     def score(self, review: str, question: str) -> float:
         prompt = self._prompt(review, question)
+        if self._native_logprobs_available is not False:
+            try:
+                response = httpx.post(
+                    f"{self.api_base}/api/generate",
+                    json={"model": self.ollama_model, "prompt": prompt, "stream": False,
+                          "think": False, "logprobs": True, "top_logprobs": 10,
+                          "options": {"temperature": 0, "num_predict": 1}},
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                score = native_log_odds(response.json())
+                if score is not None:
+                    self._native_logprobs_available = True
+                    self.score_mode = "native_logprobs"
+                    return score
+                # Request accepted but no log-probs came back (older Ollama).
+                self._native_logprobs_available = False
+            except Exception:
+                pass  # transient failure: fall through to the legacy path for this row
         openai_error: Exception | None = None
         if self._openai_completions_available is not False:
             try:
@@ -129,6 +191,7 @@ class OllamaLogOddsScorer:
                     response.raise_for_status()
                     score = extract_binary_log_odds(response.json())
                     self._openai_completions_available = True
+                    self.score_mode = "v1_completions" if abs(score) != 2.0 else "label_only"
                     return score
             except Exception as exc:
                 openai_error = exc
@@ -141,7 +204,9 @@ class OllamaLogOddsScorer:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            return extract_binary_log_odds(response.json())
+            score = extract_binary_log_odds(response.json())
+            self.score_mode = "label_only"
+            return score
         except Exception as native_error:
             if openai_error is not None:
                 raise RuntimeError(

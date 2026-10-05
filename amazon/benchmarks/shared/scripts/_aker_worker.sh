@@ -13,7 +13,7 @@ EXPENSIVE_MODEL="${EXPENSIVE_MODEL:-gemma4:e4b}"
 export PYTHONPATH="$AKER_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 export BENCHMARK_SUITE_ROOT="$SUITE_ROOT"
 PULL_MODELS="${PULL_MODELS:-0}"
-CASCADE_TARGET="${CASCADE_TARGET:-0.9}"
+CASCADE_TARGET="${CASCADE_TARGET:-0.8}"
 CALIBRATION_BUDGET="${CALIBRATION_BUDGET:-20}"
 MANUAL_CONFIDENCE_THRESHOLD="${MANUAL_CONFIDENCE_THRESHOLD:-}"
 CHEAP_BATCH_SIZE="${CHEAP_BATCH_SIZE:-8}"
@@ -28,6 +28,7 @@ MAX_REVIEW_BLOCK_SIZE="${MAX_REVIEW_BLOCK_SIZE:-8}"
 REPETITIONS="${REPETITIONS:-1}"
 METHODS="${METHODS:-suql_baseline suql_v1 trummer_baseline trummer_v1}"
 REQUIRE_GPU="${REQUIRE_GPU:-1}"
+NO_SEMANTIC_DICT="${NO_SEMANTIC_DICT:-0}"
 RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d_%H%M%S)}"
 OUTPUT_NAME="${OUTPUT_NAME:-${SUITE}_${REPETITIONS}reps_${RUN_STAMP}}"
 OLLAMA_BIN="${OLLAMA_BIN:-}"
@@ -217,12 +218,18 @@ fi
 if [[ "${KEEP_RUN_ARTIFACTS:-0}" == "1" ]]; then
   command+=(--keep-run-artifacts)
 fi
+if [[ "$NO_SEMANTIC_DICT" == "1" ]]; then
+  export SEMANTIC_DICT_PATH="/nonexistent/semantic_dict_disabled_for_ablation.json"
+  export SEMANTIC_DICT_REQUIRED=0
+fi
+
 echo "Output directory: $SUITE_ROOT/outputs/$OUTPUT_NAME"
 echo "Console log: $CONSOLE_LOG"
 echo "Ollama log: $OLLAMA_LOG"
 echo "Models: cheap=$CHEAP_MODEL expensive=$EXPENSIVE_MODEL"
 echo "Methods: $METHODS"
 echo "Suite: $SUITE"
+echo "Semantic dict: $([[ "$NO_SEMANTIC_DICT" == "1" ]] && echo disabled || echo enabled)"
 MPLBACKEND=Agg MPLCONFIGDIR="$SUITE_ROOT/.mplconfig" \
   "${command[@]}" 2>&1 | tee "$CONSOLE_LOG"
 

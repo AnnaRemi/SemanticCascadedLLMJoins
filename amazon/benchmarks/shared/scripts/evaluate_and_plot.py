@@ -196,7 +196,7 @@ def main() -> None:
     args = ap.parse_args()
     manifest = json.loads((args.suite_root/"manifest.json").read_text()); rows=[]
     for index, item in enumerate(manifest["questions"], 1):
-        q = item["directory"]; spec=json.loads((args.suite_root/"per_question"/q/"benchmark.json").read_text()); truth=set(spec["ground_truth_product_ids"])
+        q = item["directory"]; spec=json.loads((args.suite_root/"per_question"/q/"benchmark.json").read_text()); truth=set(spec["ground_truth_ids"])
         for metrics_path in sorted((args.outputs_dir/"per_question"/q).glob("*/run_metrics.json")):
             run=json.loads(metrics_path.read_text()); rows.append({
                 "question_index": index, "question": q, "implementation": run["implementation"],
