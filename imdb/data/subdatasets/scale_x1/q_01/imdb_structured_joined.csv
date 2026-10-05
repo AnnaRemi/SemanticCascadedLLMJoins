@@ -1,0 +1,101 @@
+movie_id,title,director,year,runtime,genres
+tt0099260,China O'Brien,Robert Clouse,1990,86,"Action,Crime,Drama"
+tt0102422,McBain,James Glickenhaus,1991,102,"Action,Crime,Drama"
+tt0105699,Unlawful Entry,Jonathan Kaplan,1992,111,"Crime,Drama,Thriller"
+tt0113305,Higher Learning,John Singleton,1995,128,"Crime,Drama,Thriller"
+tt0114057,Othello,Oliver Parker,1995,123,"Drama,Romance"
+tt0118882,Conceiving Ada,Lynn Hershman Leeson,1997,85,"Drama,Fantasy,Sci-Fi"
+tt0119173,G.I. Jane,Ridley Scott,1997,125,"Action,Drama,War"
+tt0120620,Brokedown Palace,Jonathan Kaplan,1999,100,"Drama,Mystery,Thriller"
+tt0123385,Artemisia,Agnès Merlet,1997,98,"Biography,Drama,History"
+tt0161023,Tumbleweeds,Gavin O'Connor,1999,102,"Comedy,Drama"
+tt0164877,"Sexo, pudor y lágrimas",Antonio Serrano,1999,109,"Comedy,Drama"
+tt0175880,Magnolia,Paul Thomas Anderson,1999,188,Drama
+tt0190524,Left Behind: The Movie,Vic Sarin,2000,96,"Action,Drama,Fantasy"
+tt0196267,Cruel Intentions 2,Roger Kumble,2000,87,Drama
+tt0200374,Shaka Zulu: The Citadel,Joshua Sinclair,2001,179,Drama
+tt0201538,Les convoyeurs attendent,Benoît Mariage,1999,94,"Comedy,Drama"
+tt0237616,The Prodigy,Edward T. McDougal,1999,104,Drama
+tt0254199,CQ,Roman Coppola,2001,88,"Comedy,Drama,Sci-Fi"
+tt0257044,Road to Perdition,Sam Mendes,2002,117,"Crime,Drama,Thriller"
+tt0306597,Brother to Brother,Rodney Evans,2004,94,Drama
+tt0332658,Intermission,John Crowley,2003,105,"Comedy,Crime,Drama"
+tt0365686,Revolver,Guy Ritchie,2005,111,"Action,Crime,Drama"
+tt0375210,White Noise,Geoffrey Sax,2005,101,"Drama,Horror,Mystery"
+tt0378947,Melinda and Melinda,Woody Allen,2004,99,"Comedy,Drama,Romance"
+tt0382765,Jindabyne,Ray Lawrence,2006,123,"Crime,Drama,Mystery"
+tt0384814,Ask the Dust,Robert Towne,2006,117,"Drama,Romance"
+tt0408309,"Carmilla, the Lesbian Vampire",Vince D'Amato,2004,85,"Drama,Horror"
+tt0410162,The King Maker,Lek Kitaparaporn,2005,92,"Adventure,Drama"
+tt0427038,Carlito's Way: Rise to Power,Michael S. Bregman,2005,100,"Action,Crime,Drama"
+tt0430768,Wild Tigers I Have Known,Cam Archer,2006,88,Drama
+tt0455590,The Last King of Scotland,Kevin Macdonald,2006,123,"Biography,Drama,History"
+tt0459387,The Great Ecstasy of Robert Carmichael,Thomas Clay,2005,96,"Crime,Drama"
+tt0461887,Space Race,"Mark Everest, Christopher Spencer",2005,240,"Documentary,Drama"
+tt0484437,Love Sick,Tudor Giurgiu,2006,86,Drama
+tt0765447,Evening,Lajos Koltai,2007,117,"Drama,Romance"
+tt0783608,The Walker,Paul Schrader,2007,108,"Crime,Drama,Mystery"
+tt0791304,Georgia Rule,Garry Marshall,2007,113,"Comedy,Drama"
+tt0806203,Carriers,"David Pastor, Àlex Pastor",2009,84,"Adventure,Drama,Horror"
+tt0840094,Five Days,"Otto Bathurst, Toby Haynes, Simon Curtis, Peter Hoar",2007,60,"Crime,Drama,Mystery"
+tt0865957,WarGames: The Dead Code,Stuart Gillard,2008,100,"Drama,Sci-Fi,Thriller"
+tt0026273,The Desert Trail,Lewis D. Collins,1935,54,Western
+tt0026725,Les Misérables,Richard Boleslawski,1935,108,"Drama,History,Romance"
+tt0028944,The Good Earth,"Sidney Franklin, Victor Fleming, Gustav Machatý, Sam Wood",1937,138,"Drama,Romance"
+tt0029608,Stella Dallas,King Vidor,1937,106,"Drama,Romance"
+tt0033105,Strange Cargo,Frank Borzage,1940,113,"Adventure,Drama,Romance"
+tt0046149,The Proud and the Beautiful,"Yves Allégret, Rafael E. Portas",1953,103,"Drama,Romance"
+tt0052169,The Screaming Skull,Alex Nicol,1958,68,"Horror,Thriller"
+tt0053142,Operation Dames,Louis Clyde Stoumen,1959,74,"Drama,Romance,War"
+tt0066384,Skullduggery,"Gordon Douglas, Richard Wilson",1970,105,Adventure
+tt0075249,Sparkle,Sam O'Steen,1976,98,"Drama,Music"
+tt0077429,Devil Dog: The Hound of Hell,Curtis Harrington,1978,95,"Horror,Thriller"
+tt0081793,Christmas Evil,Lewis Jackson,1980,100,"Horror,Thriller"
+tt0084021,Grease 2,Patricia Birch,1982,115,"Comedy,Music,Musical"
+tt0085112,The Winds of War,Dan Curtis,1983,126,"Drama,Romance,War"
+tt0086762,Mistral's Daughter,"Kevin Connor, Douglas Hickox",1984,390,"Drama,Romance"
+tt0087803,1984,Michael Radford,1984,113,"Drama,Sci-Fi"
+tt0089880,Rambo: First Blood Part II,George P. Cosmatos,1985,96,"Action,Adventure,Thriller"
+tt0091859,"Rita, Sue and Bob Too",Alan Clarke,1987,89,"Comedy,Drama"
+tt0091920,Seize the Day,Fielder Cook,1986,93,Drama
+tt0093565,Moonstruck,Norman Jewison,1987,102,"Comedy,Drama,Romance"
+tt0093582,Munchies,Tina Hirsch,1987,83,"Comedy,Fantasy,Horror"
+tt0096073,The Seventh Sign,Carl Schultz,1988,97,"Drama,Fantasy,Horror"
+tt0096453,Witchery,Fabrizio Laurenti,1989,95,Horror
+tt0096511,Zombie 3,"Lucio Fulci, Claudio Fragasso, Bruno Mattei",1988,84,"Action,Horror,Sci-Fi"
+tt0099173,Brain Dead,Adam Simon,1990,85,"Horror,Mystery,Sci-Fi"
+tt0101368,Severed Ties,Damon Santostefano,1991,92,"Comedy,Horror,Sci-Fi"
+tt0102690,Popcorn,"Mark Herrier, Alan Ormsby",1991,91,"Comedy,Horror"
+tt0104808,Maniac Cop 3: Badge of Silence,William Lustig,1992,85,"Action,Horror"
+tt0117382,Twists of Terror,Douglas Jackson,1997,90,"Horror,Thriller"
+tt0120041,Runaway Car,Jack Sholder,1997,90,"Action,Adventure,Comedy"
+tt0138322,Beretta's Island,Michael Preece,1993,97,"Action,Adventure,Comedy"
+tt0143096,The All New Adventures of Laurel & Hardy in 'For Love or Mummy',"John R. Cherry III, Larry Harmon",1999,85,Comedy
+tt0145531,Stigmata,Rupert Wainwright,1999,103,"Horror,Mystery"
+tt0164052,Hollow Man,Paul Verhoeven,2000,112,"Action,Horror,Sci-Fi"
+tt0171363,The Haunting,Jan de Bont,1999,113,"Fantasy,Horror,Mystery"
+tt0187078,Gone in 60 Seconds,Dominic Sena,2000,118,"Action,Crime,Thriller"
+tt0192766,A Wake in Providence,Rosario Roveto Jr.,1999,92,Comedy
+tt0202458,Love.com,Sherwood Ball,2002,85,Thriller
+tt0211938,Bait,Antoine Fuqua,2000,119,"Action,Comedy,Crime"
+tt0218619,Soul Survivors,Stephen Carpenter,2001,84,"Horror,Mystery,Thriller"
+tt0219400,Waking Up in Reno,Jordan Brady,2002,91,"Comedy,Romance"
+tt0240684,The Little Mermaid 2: Return to the Sea,"Jim Kammerud, Brian Smith",2000,75,"Adventure,Animation,Comedy"
+tt0275067,Wendigo,Larry Fessenden,2001,91,"Horror,Mystery,Thriller"
+tt0285351,According to Jim,"Philip Charles MacKenzie, Jim Belushi, Mark Cendrowski, Gil Junger, Leonard R. Garner Jr., Steve Zuckerman, Larry Joe Campbell, James Widdoes, Dennis Capps, Andy Cadiff, Charles T. Kanganis, Kimberly Williams-Paisley, Brian K. Roberts, Shelley Jensen, Gerry Cohen, Lauren Breiting, Bob Koherr, Penny Marshall, Michael Lembeck, Peter D. Beyt, Chris Brougham, Lynn M. McCracken",2001,30,"Comedy,Romance"
+tt0293563,Rub & Tug,Soo Lyu,2002,90,Comedy
+tt0308132,The Corpse Grinders 2,Ted V. Mikels,2000,102,"Horror,Sci-Fi,Thriller"
+tt0319147,Casomai,Alessandro D'Alatri,2002,114,"Comedy,Romance"
+tt0334541,Tremors 4: The Legend Begins,S.S. Wilson,2004,101,"Action,Adventure,Comedy"
+tt0337640,Hollywood North,Peter O'Brian,2003,89,Comedy
+tt0339531,Sasquatch Hunters,Fred Tepper,2005,88,"Action,Horror,Thriller"
+tt0348150,Superman Returns,Bryan Singer,2006,154,"Action,Adventure,Sci-Fi"
+tt0417148,Snakes on a Plane,David R. Ellis,2006,105,"Action,Adventure,Crime"
+tt0424095,Flushed Away,"David Bowers, Sam Fell",2006,85,"Action,Adventure,Animation"
+tt0455115,H6: Diario de un asesino,Martín Garrido Barón,2005,92,"Crime,Horror,Thriller"
+tt0461642,7 Dwarves: The Forest Is Not Enough,"Miguel Angelo Pate, Sven Unterwaldt Jr.",2006,95,"Comedy,Fantasy"
+tt0463392,Zombie Nation,Ulli Lommel,2004,81,Horror
+tt0468482,Fungicide,Dave Wascavage,2002,84,"Comedy,Horror"
+tt0477337,The Sword Bearer,Filipp Yankovskiy,2006,108,"Action,Fantasy,Romance"
+tt0481280,Live Feed,Ryan Nicholson,2006,77,Horror
+tt0787475,Hot Rod,Akiva Schaffer,2007,88,"Comedy,Sport"

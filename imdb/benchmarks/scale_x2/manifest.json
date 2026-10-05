@@ -1,0 +1,130 @@
+{
+  "suite": "scale_x2",
+  "question_count": 5,
+  "scale": 2,
+  "source_questions": [
+    2,
+    4,
+    7,
+    8,
+    10
+  ],
+  "questions": [
+    {
+      "id": "q_01",
+      "directory": "q_01",
+      "benchmark_id": "scale_x2_q_01",
+      "difficulty": 3,
+      "difficulty_label": "medium_hard",
+      "question": "Which Drama movies released since 1990 have reviews commending the acting or cast performances?",
+      "semantic_task": "modern-drama performance praise",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Drama"
+        },
+        {
+          "column": "year",
+          "op": "ge",
+          "value": "1990"
+        }
+      ],
+      "row_count": 200,
+      "structured_candidate_count": 80,
+      "ground_truth_count": 24
+    },
+    {
+      "id": "q_02",
+      "directory": "q_02",
+      "benchmark_id": "scale_x2_q_02",
+      "difficulty": 3,
+      "difficulty_label": "medium_hard",
+      "question": "Which Action movies lasting at least 100 minutes have reviews calling them exciting, gripping, or suspenseful?",
+      "semantic_task": "long-action excitement",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Action"
+        },
+        {
+          "column": "runtime",
+          "op": "ge",
+          "value": "100"
+        }
+      ],
+      "row_count": 200,
+      "structured_candidate_count": 80,
+      "ground_truth_count": 24
+    },
+    {
+      "id": "q_03",
+      "directory": "q_03",
+      "benchmark_id": "scale_x2_q_03",
+      "difficulty": 3,
+      "difficulty_label": "medium_hard",
+      "question": "Which Drama movies released before 2000 have reviews describing them as emotional, moving, or heartbreaking?",
+      "semantic_task": "pre-2000 emotional impact",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Drama"
+        },
+        {
+          "column": "year",
+          "op": "lt",
+          "value": "2000"
+        }
+      ],
+      "row_count": 200,
+      "structured_candidate_count": 80,
+      "ground_truth_count": 24
+    },
+    {
+      "id": "q_04",
+      "directory": "q_04",
+      "benchmark_id": "scale_x2_q_04",
+      "difficulty": 4,
+      "difficulty_label": "hard",
+      "question": "Which Science-Fiction movies have reviews describing them as intelligent, philosophical, or thought-provoking?",
+      "semantic_task": "science-fiction intellectual depth",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Sci-Fi"
+        }
+      ],
+      "row_count": 200,
+      "structured_candidate_count": 80,
+      "ground_truth_count": 24
+    },
+    {
+      "id": "q_05",
+      "directory": "q_05",
+      "benchmark_id": "scale_x2_q_05",
+      "difficulty": 2,
+      "difficulty_label": "medium",
+      "question": "Which Family movies under 121 minutes have reviews describing them as entertaining, enjoyable, or great fun?",
+      "semantic_task": "family-film entertainment value",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Family"
+        },
+        {
+          "column": "runtime",
+          "op": "le",
+          "value": "120"
+        }
+      ],
+      "row_count": 200,
+      "structured_candidate_count": 80,
+      "ground_truth_count": 24
+    }
+  ],
+  "dataset_policy": "10q composition scaled by 2: 24 positives, 56 structured negatives and 120 distractors per question."
+}

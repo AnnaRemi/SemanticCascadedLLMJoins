@@ -1,0 +1,101 @@
+movie_id,source_row,title,year,runtime,genres,structured_match,semantic_label,ground_truth,annotation_source
+tt0020643,1190,Another Fine Mess,1930,29,"Comedy,Family,Short",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0023753,1023,Alice in Wonderland,1933,76,"Adventure,Family,Fantasy",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0038033,537,Rockin' in the Rockies,1945,63,"Action,Comedy,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0041259,736,A Connecticut Yankee in King Arthur's Court,1949,106,"Comedy,Family,Fantasy",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0053241,2105,Santa Claus,1959,94,"Comedy,Family,Fantasy",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0061868,2209,King Kong Escapes,1967,96,"Action,Adventure,Family",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0066256,423,Pufnstuf,1970,98,"Adventure,Comedy,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0066344,215,Scrooge,1970,113,"Drama,Family,Fantasy",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0078159,142,Return to Boggy Creek,1977,85,"Adventure,Drama,Family",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0082778,248,The Munsters' Revenge,1981,96,"Comedy,Crime,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0084429,550,O Canada!,1982,18,"Documentary,Family,Short",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0085497,901,EPCOT Center: The Opening Celebration,1982,50,"Comedy,Family,Music",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0088760,1115,Baby: Secret of the Lost Legend,1985,95,"Adventure,Family,Sci-Fi",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0091993,1267,SpaceCamp,1986,107,"Adventure,Family,Sci-Fi",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0101635,689,Curly Sue,1991,101,"Comedy,Drama,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0109287,570,Blank Check,1994,93,"Comedy,Crime,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0112374,991,Annie: A Royal Adventure!,1995,92,"Comedy,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0114658,1848,Theodore Rex,1995,92,"Action,Comedy,Family",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0116756,2132,Kazaam,1996,93,"Comedy,Family,Fantasy",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0118998,284,Doctor Dolittle,1998,85,"Comedy,Family,Fantasy",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0120764,514,My Favorite Martian,1999,94,"Comedy,Family,Sci-Fi",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0124265,981,The Voyage of the Mimi,1984,30,"Adventure,Family,History",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0160986,1097,Time at the Top,1999,96,"Family,Sci-Fi",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0167038,592,Belle's Magical World,1998,92,"Adventure,Animation,Family",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0190897,93,The All-New Popeye Hour,1978,60,"Adventure,Animation,Family",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0268288,1167,Eva & Adam: Four Birthdays and a Fiasco,2001,100,"Family,Romance",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0312528,322,The Cat in the Hat,2003,82,"Adventure,Comedy,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0322389,1121,George of the Jungle 2,2003,87,"Adventure,Comedy,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0324532,1189,When in Rome,2002,94,"Comedy,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0331509,137,Funky Monkey,2004,94,"Comedy,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0342882,697,The PianoTuner of EarthQuakes,2004,99,"Animation,Drama,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0388595,314,Extreme Makeover: Home Edition,2003,60,"Comedy,Drama,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0400497,558,Herbie: Fully Loaded,2005,101,"Adventure,Comedy,Family",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0434964,1124,Gammera the Invincible,1966,86,"Family,Sci-Fi",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0444736,1806,The Naked Brothers Band: The Movie,2005,90,"Comedy,Family,Music",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0462346,886,How to Eat Fried Worms,2006,84,"Comedy,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0486321,483,Fly Me to the Moon 3D,2007,84,"Adventure,Animation,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0486583,1677,Fred Claus,2007,116,"Comedy,Family,Fantasy",True,True,1,deterministic case-insensitive lexical policy over IMDb review text
+tt0785025,1014,Love's Abiding Joy,2006,87,"Drama,Family,Western",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0834951,586,Seachd: The Inaccessible Pinnacle,2007,100,"Drama,Family",True,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0024078,247,Grand Slam,1933,67,Comedy,False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0026273,28,The Desert Trail,1935,54,Western,False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0028174,488,Revolt of the Zombies,1936,65,"Adventure,Horror",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0029608,21,Stella Dallas,1937,106,"Drama,Romance",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0052169,29,The Screaming Skull,1958,68,"Horror,Thriller",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0068509,103,"Drive, He Said",1971,90,"Comedy,Drama,Sport",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0079156,388,The Great Alligator,1979,89,Horror,False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0083146,197,Sweet Sixteen,1983,90,"Crime,Drama,Horror",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0088224,290,Tank,1984,113,"Action,Comedy,Drama",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0096073,32,The Seventh Sign,1988,97,"Drama,Fantasy,Horror",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0099173,10,Brain Dead,1990,85,"Horror,Mystery,Sci-Fi",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0099260,15,China O'Brien,1990,86,"Action,Crime,Drama",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0101368,11,Severed Ties,1991,92,"Comedy,Horror,Sci-Fi",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0102800,194,Robot Jox,1989,85,"Action,Sci-Fi,Thriller",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0114057,0,Othello,1995,123,"Drama,Romance",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0117283,472,The Pallbearer,1996,98,"Comedy,Romance",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0117894,61,Thinner,1996,93,"Fantasy,Horror",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0118882,18,Conceiving Ada,1997,85,"Drama,Fantasy,Sci-Fi",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0120247,366,Surface to Air,1998,93,"Action,War",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0120620,5,Brokedown Palace,1999,100,"Drama,Mystery,Thriller",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0138322,13,Beretta's Island,1993,97,"Action,Adventure,Comedy",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0145531,14,Stigmata,1999,103,"Horror,Mystery",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0161023,20,Tumbleweeds,1999,102,"Comedy,Drama",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0164052,217,Hollow Man,2000,112,"Action,Horror,Sci-Fi",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0164699,495,Bodyguard Kiba,1973,87,"Action,Crime,Drama",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0171363,6,The Haunting,1999,113,"Fantasy,Horror,Mystery",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0175880,76,Magnolia,1999,188,Drama,False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0192766,26,A Wake in Providence,1999,92,Comedy,False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0197153,212,Good Day L.A.,1993,180,"News,Talk-Show",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0202152,219,Zatoichi,1989,116,"Action,Drama",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0202458,30,Love.com,2002,85,Thriller,False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0218619,12,Soul Survivors,2001,84,"Horror,Mystery,Thriller",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0219400,3,Waking Up in Reno,2002,91,"Comedy,Romance",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0237616,16,The Prodigy,1999,104,Drama,False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0240684,23,The Little Mermaid 2: Return to the Sea,2000,75,"Adventure,Animation,Comedy",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0253840,170,The Triumph of Love,2001,112,"Comedy,Romance",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0254199,89,CQ,2001,88,"Comedy,Drama,Sci-Fi",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0269266,134,Nightmare,2000,97,"Crime,Horror,Thriller",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0308132,38,The Corpse Grinders 2,2000,102,"Horror,Sci-Fi,Thriller",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0319147,25,Casomai,2002,114,"Comedy,Romance",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0332658,31,Intermission,2003,105,"Comedy,Crime,Drama",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0334541,1,Tremors 4: The Legend Begins,2004,101,"Action,Adventure,Comedy",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0337640,2,Hollywood North,2003,89,Comedy,False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0346156,419,Sky Captain and the World of Tomorrow,2004,106,"Action,Adventure,Mystery",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0365686,125,Revolver,2005,111,"Action,Crime,Drama",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0389957,292,Edison,2005,99,"Action,Crime,Drama",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0410162,22,The King Maker,2005,92,"Adventure,Drama",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0413371,340,This Darkness: The Vampire Virus,2003,106,Horror,False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0417148,8,Snakes on a Plane,2006,105,"Action,Adventure,Crime",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0430768,19,Wild Tigers I Have Known,2006,88,Drama,False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0450345,309,The Wicker Man,2006,102,"Horror,Mystery,Thriller",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0461642,27,7 Dwarves: The Forest Is Not Enough,2006,95,"Comedy,Fantasy",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0463392,9,Zombie Nation,2004,81,Horror,False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0464095,189,The Lives of the Saints,2006,97,"Comedy,Drama",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0480011,450,Closure,2007,80,"Crime,Drama,Horror",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0787475,24,Hot Rod,2007,88,"Comedy,Sport",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0791304,17,Georgia Rule,2007,113,"Comedy,Drama",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0806203,4,Carriers,2009,84,"Adventure,Drama,Horror",False,False,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0874679,469,Son of the Dragon,2006,174,"Action,Adventure,Fantasy",False,True,0,deterministic case-insensitive lexical policy over IMDb review text
+tt0986354,312,Frank and Cindy,2007,73,"Biography,Documentary,Drama",False,True,0,deterministic case-insensitive lexical policy over IMDb review text

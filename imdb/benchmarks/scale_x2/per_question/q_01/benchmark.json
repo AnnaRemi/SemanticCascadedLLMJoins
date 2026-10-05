@@ -1,0 +1,59 @@
+{
+  "benchmark_id": "scale_x2_q_01",
+  "difficulty": 3,
+  "difficulty_label": "medium_hard",
+  "question": "Which Drama movies released since 1990 have reviews commending the acting or cast performances?",
+  "semantic_question": "Does the review commend the acting, cast, or an individual performance?",
+  "suql_query": "SELECT movie_id, title, year, runtime, director, genres FROM movies WHERE genres LIKE '%Drama%' AND year >= 1990 AND answer(review, 'Does the review commend the acting, cast, or an individual performance?') = 'Yes';",
+  "structured_filters": [
+    {
+      "column": "genres",
+      "op": "contains",
+      "value": "Drama"
+    },
+    {
+      "column": "year",
+      "op": "ge",
+      "value": "1990"
+    }
+  ],
+  "semantic_task": "modern-drama performance praise",
+  "semantic_annotation_patterns": [
+    "\\bgreat acting\\b",
+    "\\bexcellent (?:acting|performance)\\b",
+    "\\bstrong performance",
+    "\\bsuperb (?:acting|performance|cast)\\b",
+    "\\bbrilliant (?:acting|performance)\\b",
+    "\\bwell[- ]acted\\b"
+  ],
+  "annotation_policy": "Deterministic lexical annotation; no evaluated LLM used",
+  "row_count": 200,
+  "structured_candidate_count": 80,
+  "semantic_positive_count": 84,
+  "ground_truth_movie_ids": [
+    "tt0102422",
+    "tt0106922",
+    "tt0119792",
+    "tt0123385",
+    "tt0161023",
+    "tt0164877",
+    "tt0175880",
+    "tt0196267",
+    "tt0301924",
+    "tt0306597",
+    "tt0344273",
+    "tt0346293",
+    "tt0371212",
+    "tt0378947",
+    "tt0382765",
+    "tt0388769",
+    "tt0427038",
+    "tt0455590",
+    "tt0484437",
+    "tt0499570",
+    "tt0765447",
+    "tt0783608",
+    "tt0841150",
+    "tt0887971"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "benchmark_id": "scale_x2_q_03",
+  "difficulty": 3,
+  "difficulty_label": "medium_hard",
+  "question": "Which Drama movies released before 2000 have reviews describing them as emotional, moving, or heartbreaking?",
+  "semantic_question": "Does the review describe the movie as emotional, moving, touching, or heartbreaking?",
+  "suql_query": "SELECT movie_id, title, year, runtime, director, genres FROM movies WHERE genres LIKE '%Drama%' AND year < 2000 AND answer(review, 'Does the review describe the movie as emotional, moving, touching, or heartbreaking?') = 'Yes';",
+  "structured_filters": [
+    {
+      "column": "genres",
+      "op": "contains",
+      "value": "Drama"
+    },
+    {
+      "column": "year",
+      "op": "lt",
+      "value": "2000"
+    }
+  ],
+  "semantic_task": "pre-2000 emotional impact",
+  "semantic_annotation_patterns": [
+    "\\bemotional\\b",
+    "\\bmoving\\b",
+    "\\btouching\\b",
+    "\\bheartbreaking\\b",
+    "\\btear[- ]jerker\\b",
+    "\\bmade me cry\\b"
+  ],
+  "annotation_policy": "Deterministic lexical annotation; no evaluated LLM used",
+  "row_count": 200,
+  "structured_candidate_count": 80,
+  "semantic_positive_count": 84,
+  "ground_truth_movie_ids": [
+    "tt0051114",
+    "tt0053198",
+    "tt0063850",
+    "tt0067870",
+    "tt0070359",
+    "tt0071477",
+    "tt0075265",
+    "tt0078176",
+    "tt0083728",
+    "tt0086619",
+    "tt0088915",
+    "tt0095853",
+    "tt0102175",
+    "tt0102422",
+    "tt0108000",
+    "tt0116308",
+    "tt0118032",
+    "tt0119453",
+    "tt0120430",
+    "tt0120706",
+    "tt0127207",
+    "tt0158653",
+    "tt0197570",
+    "tt0751121"
+  ]
+}
