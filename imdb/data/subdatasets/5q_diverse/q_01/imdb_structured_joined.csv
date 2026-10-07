@@ -1,0 +1,101 @@
+movie_id,title,director,year,runtime,genres
+tt0104997,South Beach,"Fred Williamson, Alain Zaloum",1993,93,"Action,Crime,Drama"
+tt0105629,Toys,Barry Levinson,1992,118,"Adventure,Comedy,Drama"
+tt0106922,Fit to Kill,Andy Sidaris,1993,97,"Action,Crime,Drama"
+tt0107302,Kalifornia,Dominic Sena,1993,117,"Crime,Drama,Thriller"
+tt0116061,Death and the Compass,Alex Cox,1992,86,Drama
+tt0116499,Have You Seen My Son,Paul Schneider,1996,120,Drama
+tt0118254,Ally McBeal,"Mel Damski, Jonathan Pontell, Bill D'Elia, Arlene Sanford, Michael Schultz, Billy Dickson, Jeannot Szwarc, Dennie Gordon, Rachel Talalay, Bethany Rooney, Arvin Brown, Peter MacNicol, Alex Graves, Kenny Ortega, Thomas Schlamme, Sandy Smolan, Allan Arkush, Elodie Keene, Vincent Misiano, Joanna Kerns, Jack Bender, David Grossman, Oz Scott, Daniel Attias, James Frawley, Victoria Hochberg, Joe Napolitano, Jace Alexander, Dennis Dugan, Jeremy Kagan, Tom Moore, Adam Nimoy, Ben Lewin, Bryan Gordon, Barnet Kellman, Michael Lange, Alan Myerson, Adam Arkin, Greg Germann, Ron Lagomarsino, Sarah Pia Anderson, Steve Gomer, David Semel",1997,45,"Comedy,Drama,Romance"
+tt0119653,Men,Zoe Clarke-Williams,1997,92,Drama
+tt0119792,Nil by Mouth,Gary Oldman,1997,128,Drama
+tt0120706,The General,John Boorman,1998,124,"Biography,Crime,Drama"
+tt0127901,Starstruck,John Enbom,1998,90,Drama
+tt0132905,No One Writes to the Colonel,Arturo Ripstein,1999,122,Drama
+tt0164877,"Sexo, pudor y lágrimas",Antonio Serrano,1999,109,"Comedy,Drama"
+tt0199650,Jill Rips,Anthony Hickox,2000,94,"Drama,Thriller"
+tt0244684,No One Sleeps,Jochen Hick,2000,108,"Drama,Mystery,Romance"
+tt0301924,Ten Tiny Love Stories,Rodrigo García,2002,96,Drama
+tt0306597,Brother to Brother,Rodney Evans,2004,94,Drama
+tt0328031,King of the Ants,Stuart Gordon,2003,102,"Crime,Drama,Thriller"
+tt0344273,Kings and Queen,Arnaud Desplechin,2004,150,"Comedy,Drama,Romance"
+tt0346293,Hitler: The Rise of Evil,Christian Duguay,2003,93,"Biography,Drama,History"
+tt0346800,Cowards Bend the Knee,Guy Maddin,2003,64,"Drama,Romance"
+tt0368078,Niki and Flo,Lucian Pintilie,2003,99,Drama
+tt0369084,Byron,Julian Farino,2003,147,"Biography,Drama,Romance"
+tt0382765,Jindabyne,Ray Lawrence,2006,123,"Crime,Drama,Mystery"
+tt0388769,Biarkan Bintang Menari,Indra Yudhistira,2003,112,"Drama,Musical"
+tt0402711,Boston Legal,"Mike Listo, Bill D'Elia, Robert Yannetti, Steve Robin, James R. Bagdonas, Jeff Bleckner, Arlene Sanford, Lou Antonio, John Terlesky, Jeannot Szwarc, Mel Damski, Ron Underwood, Stephen Cragg, Adam Arkin, Tom Verica, Eric Stoltz, Daniel Attias, Tucker Gates, Charles Haid, Dennis Smith, Hubert de La Bouillerie, Allison Liddi-Brown, Oz Scott, Matt Shakman, Ellie Kanner, Andrew Bernstein, Michael Pressman, Vondie Curtis-Hall, Michael Lohmann",2004,44,"Comedy,Crime,Drama"
+tt0428608,Guernsey,Nanouk Leopold,2005,90,Drama
+tt0438850,Floored by Love,Desiree Lim,2005,50,"Comedy,Drama,Romance"
+tt0455590,The Last King of Scotland,Kevin Macdonald,2006,123,"Biography,Drama,History"
+tt0484437,Love Sick,Tudor Giurgiu,2006,86,Drama
+tt0705295,Whoever Did This,Timothy Van Patten,2002,58,"Crime,Drama"
+tt0759482,Justice,"David McNally, Paul McCrane, Kevin Bray, Danny Cannon, Dermott Downs, Karen Gaviola, Anthony Hemingway, Jeffrey G. Hunt, Deran Sarafian, John Peters",2006,43,"Crime,Drama,Thriller"
+tt0783695,Broken Sky,Julián Hernández,2006,140,"Drama,Romance"
+tt0787523,Towelhead,Alan Ball,2007,124,Drama
+tt0841150,Protégé,Derek Tung-Sing Yee,2007,106,"Crime,Drama,Thriller"
+tt0893406,Loaded,Alan Pao,2008,98,"Action,Crime,Drama"
+tt0925266,Pushing Daisies,"Lawrence Trilling, Adam Kane, Peter O'Fallon, Allan Kroeker, Barry Sonnenfeld, Peter Lauer, Brian Dannelly, Paul A. Edwards, Tricia Brock, Paul Shapiro, Julie Anne Robinson, Dean White",2007,44,"Comedy,Drama,Fantasy"
+tt0932672,Second Coming,Jose Zambrano Cassella,2009,89,"Action,Drama,Horror"
+tt0972412,Private Practice,"Mark Tinker, Tom Verica, Ann Kindberg, Bethany Rooney, Michael Zinberg, Allison Liddi-Brown, Eric Stoltz, Donna Deitch, Karen Gaviola, Jeannot Szwarc, Jeff Bleckner, Edward Ornelas, Scott Printz, Jeff Melman, James Frawley, Helen Shaver, Steve Gomer, Stephen Cragg, Kenny Leon, Paul Adelstein, Arvin Brown, Tony Goldwyn, Julie Anne Robinson, David Solomon, Wendey Stanzler, Joanna Kerns, Michael Pressman, Rob Corn, Kate Woods, Matthew Penn, Randy Zisk, Amyn Kaderali, Bill Purple, Steve Robin, James Larkin",2007,60,"Comedy,Drama,Romance"
+tt0976026,Cheeni Kum,R Balki,2007,140,"Comedy,Drama,Romance"
+tt0019074,"Laugh, Clown, Laugh",Herbert Brenon,1928,73,"Drama,Romance"
+tt0026725,Les Misérables,Richard Boleslawski,1935,108,"Drama,History,Romance"
+tt0028944,The Good Earth,"Sidney Franklin, Victor Fleming, Gustav Machatý, Sam Wood",1937,138,"Drama,Romance"
+tt0032155,Young Mr. Lincoln,John Ford,1939,100,"Biography,Drama"
+tt0033771,Jesse James at Bay,Joseph Kane,1941,56,"Drama,Western"
+tt0035096,The Mummy's Tomb,Harold Young,1942,61,"Drama,Fantasy,Horror"
+tt0037382,To Have and Have Not,Howard Hawks,1944,100,"Adventure,Comedy,Drama"
+tt0039111,The Yearling,Clarence Brown,1946,128,"Drama,Family,Western"
+tt0046149,The Proud and the Beautiful,"Yves Allégret, Rafael E. Portas",1953,103,"Drama,Romance"
+tt0065400,The Angel Levine,Ján Kadár,1970,104,Drama
+tt0065750,Fury of the Wolfman,José María Zabalza,1972,86,Horror
+tt0065905,Scream of the Demon Lover,José Luis Merino,1970,98,Horror
+tt0068154,Trinity Is Still My Name,Enzo Barboni,1971,117,"Comedy,Western"
+tt0068339,Carry on Matron,Gerald Thomas,1972,87,"Comedy,Crime"
+tt0070359,The Mother and the Whore,Jean Eustache,1973,210,"Drama,Romance"
+tt0074811,The Tenant,Roman Polanski,1976,126,"Drama,Thriller"
+tt0075249,Sparkle,Sam O'Steen,1976,98,"Drama,Music"
+tt0075614,The Psychic,Lucio Fulci,1977,90,"Drama,Horror,Mystery"
+tt0076131,The Curious Case of the Campus Corpse,Douglas Curtis,1977,90,"Comedy,Drama,Horror"
+tt0077429,Devil Dog: The Hound of Hell,Curtis Harrington,1978,95,"Horror,Thriller"
+tt0077651,Halloween,John Carpenter,1978,91,"Horror,Thriller"
+tt0081793,Christmas Evil,Lewis Jackson,1980,100,"Horror,Thriller"
+tt0082116,Burned at the Stake,Bert I. Gordon,1982,88,Horror
+tt0084464,Pandemonium,Alfred Sole,1982,82,"Comedy,Horror,Mystery"
+tt0085112,The Winds of War,Dan Curtis,1983,126,"Drama,Romance,War"
+tt0086762,Mistral's Daughter,"Kevin Connor, Douglas Hickox",1984,390,"Drama,Romance"
+tt0087507,Johnny Dangerously,Amy Heckerling,1984,90,"Comedy,Crime"
+tt0089645,Mussolini and I,Alberto Negrin,1985,120,"Biography,Drama,War"
+tt0091920,Seize the Day,Fielder Cook,1986,93,Drama
+tt0092359,Full House,"Joel Zwick, John Tracy, Bill Foster, Jeff Franklin, Peter Baldwin, Tom Rickard, Richard Correll, John Bowab, Lee Shallat Chemel, Howard Storm, James O'Keefe, Jack Shea, Don Barnhart, Tom Trbovich, Don Van Atta, Russ Petranto, Steve Zuckerman, Bill Petty",1987,22,"Comedy,Drama"
+tt0095189,The Further Adventures of Tennessee Buck,David Keith,1988,88,"Action,Adventure,Comedy"
+tt0098412,Sundown: The Vampire in Retreat,Anthony Hickox,1989,104,"Comedy,Horror,Western"
+tt0102048,Homicide,David Mamet,1991,102,"Crime,Mystery,Thriller"
+tt0102690,Popcorn,"Mark Herrier, Alan Ormsby",1991,91,"Comedy,Horror"
+tt0103907,CIA Code Name: Alexa,Joseph Merhi,1992,93,"Action,Adventure,Thriller"
+tt0104808,Maniac Cop 3: Badge of Silence,William Lustig,1992,85,"Action,Horror"
+tt0108778,Friends,"Gary Halvorson, Kevin Bright, Michael Lembeck, James Burrows, Gail Mancuso, Peter Bonerz, David Schwimmer, Ben Weiss, Robby Benson, Shelley Jensen, Terry Hughes, Dana De Vally Piazza, Sheldon Epps, Pamela Fryman, Alan Myerson, Thomas Schlamme, Steve Zuckerman, Roger Christiansen, Arlene Sanford, Ellen Gittelsohn, Paul Lazarus, Mary Kay Place, Sam Simon, David Steinberg, Todd Holland, Joe Regalbuto, Andrew Tsao, Stephen Prime",1994,22,"Comedy,Romance"
+tt0117382,Twists of Terror,Douglas Jackson,1997,90,"Horror,Thriller"
+tt0146315,Tom's Midnight Garden,Willard Carroll,1998,107,"Adventure,Family,Fantasy"
+tt0165494,Ringmaster,Neil Abramson,1998,90,Comedy
+tt0176700,Escape Velocity,Lloyd A. Simandl,1999,100,"Action,Sci-Fi,Thriller"
+tt0189456,Cut,Kimble Rendall,2000,82,"Comedy,Horror,Mystery"
+tt0195234,Saving Grace,Nigel Cole,2000,93,"Comedy,Crime"
+tt0211938,Bait,Antoine Fuqua,2000,119,"Action,Comedy,Crime"
+tt0231775,Down to Earth,"Chris Weitz, Paul Weitz",2001,87,"Comedy,Fantasy"
+tt0274321,Air Rage,Fred Olen Ray,2001,99,"Action,Adventure"
+tt0285351,According to Jim,"Philip Charles MacKenzie, Jim Belushi, Mark Cendrowski, Gil Junger, Leonard R. Garner Jr., Steve Zuckerman, Larry Joe Campbell, James Widdoes, Dennis Capps, Andy Cadiff, Charles T. Kanganis, Kimberly Williams-Paisley, Brian K. Roberts, Shelley Jensen, Gerry Cohen, Lauren Breiting, Bob Koherr, Penny Marshall, Michael Lembeck, Peter D. Beyt, Chris Brougham, Lynn M. McCracken",2001,30,"Comedy,Romance"
+tt0293563,Rub & Tug,Soo Lyu,2002,90,Comedy
+tt0303816,Cabin Fever,Eli Roth,2002,93,Horror
+tt0304377,Mango Kiss,Sascha Rice,2004,84,"Comedy,Romance"
+tt0311018,Disappearance,Walter Klenhard,2002,92,"Horror,Mystery,Thriller"
+tt0424095,Flushed Away,"David Bowers, Sam Fell",2006,85,"Action,Adventure,Animation"
+tt0455115,H6: Diario de un asesino,Martín Garrido Barón,2005,92,"Crime,Horror,Thriller"
+tt0466745,The Darkroom,Michael Hurst,2006,83,"Horror,Mystery,Thriller"
+tt0468464,Crippled Creek,Hans Hartman,2005,89,Horror
+tt0481280,Live Feed,Ryan Nicholson,2006,77,Horror
+tt0494815,Siren,Yukihiko Tsutsumi,2006,87,"Horror,Thriller"
+tt0785016,Kill Kill Faster Faster,Gareth Maxwell Roberts,2008,97,Thriller
+tt0805570,The Midnight Meat Train,Ryūhei Kitamura,2008,100,"Horror,Mystery,Thriller"
+tt0811094,Survival,Joe Francis,2006,80,Horror

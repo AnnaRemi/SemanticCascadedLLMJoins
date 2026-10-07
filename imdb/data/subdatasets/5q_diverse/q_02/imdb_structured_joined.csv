@@ -1,0 +1,101 @@
+movie_id,title,director,year,runtime,genres
+tt0069976,Dillinger,John Milius,1973,107,"Action,Biography,Crime"
+tt0072886,Doc Savage: The Man of Bronze,Michael Anderson,1975,100,"Action,Adventure,Comedy"
+tt0073018,French Connection II,John Frankenheimer,1975,119,"Action,Crime,Drama"
+tt0075648,Airport '77,Jerry Jameson,1977,114,"Action,Drama,Thriller"
+tt0080615,Detour to Terror,Michael O'Herlihy,1980,120,"Action,Drama"
+tt0085900,The Outsider,Jacques Deray,1983,103,"Action,Crime,Drama"
+tt0101764,Double Impact,Sheldon Lettich,1991,110,"Action,Crime"
+tt0102422,McBain,James Glickenhaus,1991,102,"Action,Crime,Drama"
+tt0107563,The Meteor Man,Robert Townsend,1993,100,"Action,Comedy,Fantasy"
+tt0109890,The Getaway,Roger Donaldson,1994,115,"Action,Adventure,Crime"
+tt0112740,Crimson Tide,Tony Scott,1995,116,"Action,Drama,Thriller"
+tt0115309,Pandora's Clock,Eric Laneuville,1996,176,"Action,Drama,Thriller"
+tt0116024,Daraar,"Abbas Alibhai Burmawalla, Mastan Alibhai Burmawalla",1996,105,"Action,Drama,Romance"
+tt0116136,DragonHeart,Rob Cohen,1996,103,"Action,Adventure,Fantasy"
+tt0117603,Set It Off,F. Gary Gray,1996,123,"Action,Crime,Drama"
+tt0132347,Mystery Men,Kinka Usher,1999,121,"Action,Comedy,Fantasy"
+tt0161032,Starship Troopers,Tetsurô Amino,1988,150,"Action,Animation,Drama"
+tt0172109,Alex l'ariete,Damiano Damiani,2000,122,"Action,Crime"
+tt0187078,Gone in 60 Seconds,Dominic Sena,2000,118,"Action,Crime,Thriller"
+tt0203408,The Omega Code,Robert Marcarelli,1999,100,"Action,Adventure,Fantasy"
+tt0218817,Antitrust,Peter Howitt,2001,108,"Action,Crime,Drama"
+tt0230055,Bulandi,Rama Rao Tatineni,2000,175,"Action,Drama"
+tt0255212,Hamara Dil Aapke Paas Hai,Satish Kaushik,2000,165,"Action,Drama,Romance"
+tt0295529,Power Play,Joseph Zito,2003,100,"Action,Thriller"
+tt0318010,Rachel's Attic,David Tybor,2002,112,"Action,Drama,Horror"
+tt0331834,Alive,Ryūhei Kitamura,2002,110,"Action,Drama,Horror"
+tt0351078,The Threat,Kjell Sundvall,2004,103,"Action,Thriller"
+tt0368891,National Treasure,Jon Turteltaub,2004,131,"Action,Adventure,Mystery"
+tt0372873,Dragon Wars: D-War,Hyung-rae Shim,2007,107,"Action,Drama,Fantasy"
+tt0387989,Let's Bring Our Heroes Home,"Milan Luthria, Rajeev Jhaveri",2004,163,"Action,Drama,Thriller"
+tt0421054,Domino,Tony Scott,2005,127,"Action,Biography,Crime"
+tt0431641,Azumi 2: Death or Love,Shūsuke Kaneko,2005,108,"Action,Adventure,Drama"
+tt0437182,Family: Ties of Blood,Rajkumar Santoshi,2006,150,"Action,Crime,Drama"
+tt0446313,Dragon Squad,Daniel Lee,2005,110,"Action,Adventure,Crime"
+tt0455829,Vettaiyaadu Vilaiyaadu,Gautham Vasudev Menon,2006,174,"Action,Crime,Drama"
+tt0459744,Blood Gets in Your Eyes,Yōjirō Takita,2005,119,"Action,Drama,Fantasy"
+tt0477337,The Sword Bearer,Filipp Yankovskiy,2006,108,"Action,Fantasy,Romance"
+tt0819765,Dog Bite Dog,Soi Cheang,2006,109,"Action,Crime,Drama"
+tt0839995,Superman II: The Richard Donner Cut,"Richard Donner, Richard Lester",2006,115,"Action,Adventure,Romance"
+tt0995752,Tashan,Vijay Krishna Acharya,2008,120,"Action,Comedy,Drama"
+tt0001032,The Sealed Room,D.W. Griffith,1909,11,"Drama,Short,Thriller"
+tt0024320,Meet the Baron,Walter Lang,1933,68,"Comedy,Romance"
+tt0035777,The Dancing Masters,Malcolm St. Clair,1943,63,"Comedy,Romance"
+tt0042893,Riding High,Frank Capra,1950,112,Comedy
+tt0049616,Pharaoh's Curse,Lee Sholem,1957,66,Horror
+tt0051398,The Barbarian and the Geisha,John Huston,1958,105,"Adventure,Drama,History"
+tt0062452,Live for Life,Claude Lelouch,1967,130,"Drama,Romance"
+tt0066845,Legacy of Blood,Carl Monson,1971,82,"Horror,Mystery,Thriller"
+tt0067870,A Town Called Hell,"Robert Parrish, Irving Lerner",1971,95,"Action,Drama,Western"
+tt0069024,Nothing But the Night,Peter Sasdy,1973,90,"Crime,Horror,Mystery"
+tt0071247,Brief Encounter,Alan Bridges,1974,74,Drama
+tt0072130,The Second Coming of Suzanne,Michael Barry,1974,90,Drama
+tt0072419,Wonder Woman,Vincent McEveety,1974,73,"Action,Adventure,Crime"
+tt0075950,The Domino Principle,Stanley Kramer,1977,100,"Drama,Thriller"
+tt0077713,I Spit on Your Grave,Meir Zarchi,1978,101,"Horror,Thriller"
+tt0078176,Romeo & Juliet,Alvin Rakoff,1978,168,Drama
+tt0082799,Movie Madness,"Bob Giraldi, Henry Jaglom",1982,89,Comedy
+tt0083113,Sphinx,Franklin J. Schaffner,1981,118,"Adventure,Mystery,Thriller"
+tt0083261,The Unseen,Danny Steinmann,1980,89,"Horror,Thriller"
+tt0084314,Mazes and Monsters,Steven Hilliard Stern,1982,101,"Adventure,Drama,Fantasy"
+tt0097529,Houseboat Horror,"Kendal Flanagan, Ollie Martin",1989,85,Horror
+tt0098061,Paperhouse,Bernard Rose,1988,92,"Drama,Fantasy"
+tt0098936,Twin Peaks,"David Lynch, Lesli Linka Glatter, Caleb Deschanel, Duwayne Dunham, Tim Hunter, Todd Holland, Tina Rathborne, Graeme Clifford, Mark Frost, Uli Edel, James Foley, Stephen Gyllenhaal, Diane Keaton, Jonathan Sanger",1990,50,"Crime,Drama,Mystery"
+tt0098994,"After Dark, My Sweet",James Foley,1990,114,"Crime,Drama,Mystery"
+tt0099656,Ghosts Can't Do It,John Derek,1989,95,"Comedy,Crime,Fantasy"
+tt0104515,Intensive Care,Dorna X. van Rouveroy,1991,91,"Horror,Thriller"
+tt0108350,Night Terrors,Tobe Hooper,1993,98,Horror
+tt0116671,Jack Frost,Michael Cooney,1997,89,"Comedy,Fantasy,Horror"
+tt0117445,Raven,Russell Solberg,1996,97,Action
+tt0122906,Among Giants,Sam Miller,1998,93,"Comedy,Romance"
+tt0130229,Rupert's Land,Jonathan Tammuz,1998,93,Drama
+tt0145679,Blood on Her Hands,Steven Robman,1998,95,"Crime,Drama"
+tt0174336,Whipped,Peter M. Cohen,2000,82,"Comedy,Romance"
+tt0267817,Party 7,Katsuhito Ishii,2000,104,Comedy
+tt0287535,The Lost Battalion,Russell Mulcahy,2001,92,"Action,Drama,War"
+tt0304584,The President's Man: A Line in the Sand,Eric Norris,2002,90,"Action,Drama,Thriller"
+tt0305264,The Bagman,Beverly Beaton,2002,80,Horror
+tt0326820,DarkWolf,Richard Friedman,2003,94,Horror
+tt0336325,Dracula II: Ascension,Patrick Lussier,2003,85,Horror
+tt0363565,The Legend of Diablo,Robert Napton,2003,85,Thriller
+tt0400837,Snuff killer - La morte in diretta,Bruno Mattei,2003,88,"Horror,Thriller"
+tt0402247,Hating Alison Ashley,Geoff Bennett,2005,100,Comedy
+tt0415778,End Game,Andy Cheng,2006,93,"Action,Thriller"
+tt0428081,Haunted Boat,Olga Levens,2005,97,"Drama,Horror,Mystery"
+tt0432028,The Ring Thing,Marc Schippert,2004,80,"Adventure,Comedy"
+tt0443708,Page 3,"Madhur Bhandarkar, Jay Dev Banerjee",2005,139,Drama
+tt0448075,The Night Listener,Patrick Stettner,2006,91,"Crime,Drama,Horror"
+tt0469999,Ulli Lommel's Zodiac Killer,Ulli Lommel,2005,83,"Crime,Drama,Thriller"
+tt0472047,B.T.K. Killer,Ulli Lommel,2005,82,"Biography,Crime,Drama"
+tt0476918,Loonatics Unleashed,"Dan Fausett, Kenny Thompkins, Curt Walstead, Andrew Austin, Clint Taylor",2005,30,"Action,Adventure,Animation"
+tt0489318,The Perfect Witness,Thomas Dunn,2007,100,"Crime,Horror,Thriller"
+tt0499570,Slipstream,Anthony Hopkins,2007,96,"Comedy,Drama,Fantasy"
+tt0770745,The Empty Acre,Patrick Rea,2007,103,Horror
+tt0770806,The Contractor,Josef Rusnak,2007,99,"Action,Drama,Thriller"
+tt0785532,Pro-Life,John Carpenter,2006,57,Horror
+tt0790781,Wendy Wu: Homecoming Warrior,John Laing,2006,91,"Action,Adventure,Comedy"
+tt0804551,Walking Tall: Lone Justice,Tripp Reed,2007,95,"Action,Crime,Drama"
+tt0887912,The Hurt Locker,Kathryn Bigelow,2008,131,"Drama,Thriller,War"
+tt0906734,The Broken,Sean Ellis,2008,93,"Drama,Horror,Thriller"
+tt0970935,Frownland,Ronald Bronstein,2007,106,"Comedy,Drama"

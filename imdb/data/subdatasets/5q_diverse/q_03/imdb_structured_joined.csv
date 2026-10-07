@@ -1,0 +1,101 @@
+movie_id,title,director,year,runtime,genres
+tt0022302,The Red Shadow,Roy Mack,1932,18,"Drama,Musical,Mystery"
+tt0028757,A Damsel in Distress,George Stevens,1937,101,"Comedy,Musical,Romance"
+tt0029588,Something to Sing About,Victor Schertzinger,1937,93,"Comedy,Musical"
+tt0029626,"Swing High, Swing Low",Mitchell Leisen,1937,92,"Comedy,Drama,Musical"
+tt0040869,That Lady in Ermine,"Ernst Lubitsch, Otto Preminger",1948,89,"Comedy,Fantasy,Musical"
+tt0040875,Three Daring Daughters,Fred M. Wilcox,1948,115,"Drama,Musical,Romance"
+tt0043980,Rooty Toot Toot,John Hubley,1951,7,"Animation,Comedy,Musical"
+tt0046807,Brigadoon,Vincente Minnelli,1954,108,"Fantasy,Musical,Romance"
+tt0047813,An Alligator Named Daisy,J. Lee Thompson,1955,85,"Comedy,Musical,Romance"
+tt0049263,The Girl Can't Help It,Frank Tashlin,1956,98,"Comedy,Music"
+tt0050135,April Love,Henry Levin,1957,97,"Comedy,Drama,Musical"
+tt0062873,The Young Girls of Rochefort,Jacques Demy,1967,125,"Comedy,Drama,Musical"
+tt0067546,Pakeezah,Kamal Amrohi,1972,147,"Drama,Musical,Romance"
+tt0075850,Cinderella 2000,Al Adamson,1977,89,"Fantasy,Musical,Sci-Fi"
+tt0078073,Perceval le Gallois,Éric Rohmer,1978,140,"Drama,Music,Romance"
+tt0084698,Smithereens,Susan Seidelman,1982,93,"Drama,Music"
+tt0084931,"Yes, Giorgio",Franklin J. Schaffner,1982,110,"Comedy,Musical,Romance"
+tt0085497,EPCOT Center: The Opening Celebration,Dwight Hemion,1982,50,"Comedy,Family,Music"
+tt0086619,Yentl,Barbra Streisand,1983,133,"Drama,Musical,Romance"
+tt0087171,Down on Us,Larry Buchanan,1984,117,"Biography,Drama,Music"
+tt0088915,A Chorus Line,Richard Attenborough,1985,118,"Drama,Music,Musical"
+tt0090585,Absolute Beginners,Julien Temple,1986,108,"Drama,Musical,Romance"
+tt0104567,Johnny Suede,Tom DiCillo,1991,97,"Comedy,Drama,Music"
+tt0112605,Bye Bye Birdie,Gene Saks,1995,135,"Comedy,Drama,Musical"
+tt0113158,Georgia,Ulu Grosbard,1995,115,"Drama,Music"
+tt0126814,Big Meat Eater,Chris Windsor,1982,82,"Comedy,Horror,Musical"
+tt0200550,Coyote Ugly,David McNally,2000,100,"Comedy,Drama,Music"
+tt0209037,Everybody's Famous!,Dominique Deruddere,2000,97,"Comedy,Drama,Music"
+tt0228528,Little Richard,Robert Townsend,2000,88,"Biography,Drama,Music"
+tt0256692,Chori Chori Chupke Chupke,"Abbas Alibhai Burmawalla, Mastan Alibhai Burmawalla",2001,165,"Comedy,Drama,Musical"
+tt0318076,Slim Slam Slum,"Jorge Ballarin, Marcelino Ballarin",2002,97,"Comedy,Music,Romance"
+tt0371212,Shooting Livien,Rebecca Bagley-Cook,2005,90,"Drama,Music,Romance"
+tt0379307,Greendale,Neil Young,2003,87,"Drama,Musical"
+tt0388888,Dig!,Ondi Timoner,2004,107,"Documentary,Music"
+tt0429487,The 77th Annual Academy Awards,"Louis J. Horvitz, Errol Morris, Roger Goodman, Troy Miller",2005,194,Music
+tt0443489,Dreamgirls,Bill Condon,2006,130,"Drama,Musical"
+tt0445760,The Wayward Cloud,Tsai Ming-liang,2005,112,"Comedy,Drama,Musical"
+tt0477392,Broken Bridges,Steven Goldmann,2006,105,"Drama,Music"
+tt0485272,Salaam-E-Ishq,Nikkhil Advani,2007,216,"Comedy,Drama,Musical"
+tt0494290,Vivah,Sooraj R. Barjatya,2006,160,"Drama,Family,Musical"
+tt0025420,The Lost Jungle,"David Howard, Armand Schaefer",1934,243,"Action,Adventure,Drama"
+tt0040862,Tarzan and the Mermaids,Robert Florey,1948,68,"Action,Adventure"
+tt0042332,Cinderella,"Clyde Geronimi, Wilfred Jackson, Hamilton Luske",1950,74,"Animation,Family,Fantasy"
+tt0051114,The True Story of Jesse James,Nicholas Ray,1957,92,"Biography,Crime,Drama"
+tt0052792,The FBI Story,Mervyn LeRoy,1959,149,"Crime,Drama,History"
+tt0053142,Operation Dames,Louis Clyde Stoumen,1959,74,"Drama,Romance,War"
+tt0063094,Hot Millions,Eric Till,1968,106,"Comedy,Crime"
+tt0068966,The Witches Mountain,Raúl Artigot,1973,86,Horror
+tt0074829,The Legend of the Wolf Woman,Rino Di Silvestro,1976,79,Horror
+tt0077372,Corvette Summer,Matthew Robbins,1978,105,"Adventure,Comedy"
+tt0078159,Return to Boggy Creek,Tom Moore,1977,85,"Adventure,Drama,Family"
+tt0080731,The Fiendish Plot of Dr. Fu Manchu,"Piers Haggard, Peter Sellers",1980,100,"Comedy,Crime,Fantasy"
+tt0080756,Foxes,Adrian Lyne,1980,106,Drama
+tt0082031,Arthur,Steve Gordon,1981,97,"Comedy,Romance"
+tt0088176,The Stone Boy,Christopher Cain,1984,91,Drama
+tt0088919,Chronos,Ron Fricke,1985,43,"Documentary,Short"
+tt0092067,Castle in the Sky,Hayao Miyazaki,1986,124,"Adventure,Animation,Family"
+tt0095050,Dominick and Eugene,Robert M. Young,1988,111,Drama
+tt0095655,Moonwalker,"Jerry Kramer, Jim Blashfield, Colin Chilvers, Will Vinton",1988,93,"Action,Crime,Fantasy"
+tt0096046,Scarecrows,William Wesley,1988,83,"Action,Crime,Horror"
+tt0096511,Zombie 3,"Lucio Fulci, Claudio Fragasso, Bruno Mattei",1988,84,"Action,Horror,Sci-Fi"
+tt0097371,Food of the Gods II,Damian Lee,1989,91,"Horror,Sci-Fi"
+tt0097981,A Nightmare on Elm Street: The Dream Child,Stephen Hopkins,1989,89,"Fantasy,Horror"
+tt0098084,Pet Sematary,Mary Lambert,1989,103,"Fantasy,Horror,Thriller"
+tt0098155,Pedicab Driver,Sammo Kam-Bo Hung,1989,95,"Action,Comedy,Drama"
+tt0102116,The Indian Runner,Sean Penn,1991,127,Drama
+tt0107151,The House of the Spirits,Bille August,1993,145,"Drama,Romance"
+tt0114658,Theodore Rex,Jonathan R. Betuel,1995,92,"Action,Comedy,Family"
+tt0119380,The Invader,Mark Rosman,1997,93,"Action,Sci-Fi,Thriller"
+tt0125211,I Woke Up Early the Day I Died,Aris Iliopulos,1998,90,"Comedy,Crime,Thriller"
+tt0162889,Return of the Boogeyman,"Deland Nuse, Ulli Lommel",1994,76,Horror
+tt0209174,Nobody Knows Anybody,Mateo Gil,1999,108,"Drama,Thriller"
+tt0227980,Chica de Río,Christopher Monger,2001,102,Comedy
+tt0235406,The Game,Bill Rebane,1984,84,Horror
+tt0269266,Nightmare,Byeong-ki Ahn,2000,97,"Crime,Horror,Thriller"
+tt0274518,Gayniggers from Outer Space,Morten Lindberg,1992,26,"Comedy,Sci-Fi,Short"
+tt0275410,Horrorvision,Danny Draven,2001,72,"Horror,Sci-Fi,Thriller"
+tt0291082,Cinderella II: Dreams Come True,John Kafka,2002,73,"Animation,Family,Fantasy"
+tt0303021,Second Name,Paco Plaza,2002,98,"Horror,Thriller"
+tt0307875,Sunday,Charles McDougall,2002,109,Drama
+tt0325597,The Captives,Eric Stanze,2001,71,"Drama,Horror,Thriller"
+tt0327940,In Your Face,Tim Tommasino,2002,105,Action
+tt0328107,Man on Fire,Tony Scott,2004,146,"Action,Crime,Drama"
+tt0331175,Any Way the Wind Blows,Tom Barman,2003,127,"Comedy,Drama"
+tt0331509,Funky Monkey,"Harry Basil, Gene Quintano",2004,94,"Comedy,Family"
+tt0389957,Edison,David J. Burke,2005,99,"Action,Crime,Drama"
+tt0397535,Memoirs of a Geisha,Rob Marshall,2005,145,"Drama,Romance"
+tt0421199,The Fallen Ones,Kevin VanHook,2005,89,Horror
+tt0421239,Red Eye,Wes Craven,2005,85,Thriller
+tt0433360,Dark Remains,Brian Avenet-Bradley,2005,91,Horror
+tt0455538,How to Lose Friends & Alienate People,Robert B. Weide,2008,110,"Biography,Comedy,Drama"
+tt0459392,SharkMan,Michael Oblowitz,2005,92,"Action,Adventure,Comedy"
+tt0466500,Life Hits,Christian E. Christiansen,2006,93,Drama
+tt0478724,I Do: How to Get Married and Stay Single,Éric Lartigau,2006,90,"Comedy,Romance"
+tt0480035,The Eden Formula,John Carl Buechler,2006,92,"Action,Adventure,Horror"
+tt0485466,Jawani Diwani: A Youthful Joyride,Manish Sharma,2006,111,"Comedy,Drama,Romance"
+tt0499603,10 Items or Less,Brad Silberling,2006,82,"Comedy,Drama"
+tt0887971,While She Was Out,Susan Montford,2008,86,"Crime,Drama,Thriller"
+tt0926129,Prom Night,Nelson McCormick,2008,88,Horror
+tt0974959,American Pie Presents: Beta House,Andrew Waller,2007,85,Comedy

@@ -1,0 +1,47 @@
+{
+  "benchmark_id": "canonical_10q_q10",
+  "difficulty": 2,
+  "difficulty_label": "medium",
+  "question": "Which Family movies under 121 minutes have reviews describing them as entertaining, enjoyable, or great fun?",
+  "semantic_question": "Does the review describe the movie as entertaining, enjoyable, or great fun?",
+  "suql_query": "SELECT movie_id, title, year, runtime, director, genres FROM movies WHERE genres LIKE '%Family%' AND runtime <= 120 AND answer(review, 'Does the review describe the movie as entertaining, enjoyable, or great fun?') = 'Yes';",
+  "structured_filters": [
+    {
+      "column": "genres",
+      "op": "contains",
+      "value": "Family"
+    },
+    {
+      "column": "runtime",
+      "op": "le",
+      "value": "120"
+    }
+  ],
+  "semantic_task": "family-film entertainment value",
+  "semantic_annotation_patterns": [
+    "\\bentertaining\\b",
+    "\\benjoyable\\b",
+    "\\bfun (?:movie|film|adventure|ride)\\b",
+    "\\bgreat fun\\b"
+  ],
+  "annotation_policy": "Deterministic lexical annotation; no evaluated LLM used",
+  "row_count": 100,
+  "structured_candidate_count": 40,
+  "semantic_positive_count": 42,
+  "ground_truth_movie_ids": [
+    "tt0027687",
+    "tt0041259",
+    "tt0053241",
+    "tt0091993",
+    "tt0100419",
+    "tt0103596",
+    "tt0110443",
+    "tt0116756",
+    "tt0322389",
+    "tt0485601",
+    "tt0486321",
+    "tt0486583"
+  ],
+  "suite_question_id": "q_05",
+  "catalog_question_id": "q_10"
+}

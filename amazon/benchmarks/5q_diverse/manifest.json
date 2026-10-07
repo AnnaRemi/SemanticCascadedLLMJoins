@@ -1,0 +1,41 @@
+{
+  "suite": "5q_diverse",
+  "question_count": 5,
+  "questions": [
+    {
+      "id": "q_01",
+      "directory": "q_01",
+      "catalog_directory": "q_02",
+      "semantic_concept": "adjustable_bracelet",
+      "ground_truth_count": 15
+    },
+    {
+      "id": "q_02",
+      "directory": "q_02",
+      "catalog_directory": "q_04",
+      "semantic_concept": "itchy_sweater",
+      "ground_truth_count": 15
+    },
+    {
+      "id": "q_03",
+      "directory": "q_03",
+      "catalog_directory": "q_06",
+      "semantic_concept": "slim_wallet",
+      "ground_truth_count": 15
+    },
+    {
+      "id": "q_04",
+      "directory": "q_04",
+      "catalog_directory": "q_08",
+      "semantic_concept": "colour_mismatch_scarf",
+      "ground_truth_count": 15
+    },
+    {
+      "id": "q_05",
+      "directory": "q_05",
+      "catalog_directory": "q_10",
+      "semantic_concept": "sheer_leggings",
+      "ground_truth_count": 15
+    }
+  ]
+}

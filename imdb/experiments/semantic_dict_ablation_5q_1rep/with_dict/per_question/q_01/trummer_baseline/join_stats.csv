@@ -1,0 +1,52 @@
+block_1,block_2,tokens_read,tokens_written,seconds,overflow,prompt_tokens_estimated,parsed_pairs,raw_response,nonempty_fallback_rows
+1,1,2050,192,49.765583992004395,True,3615,0,"1. ""The worst movie ever"" - This review expresses extreme dissatisfaction with a film, citing lack of character connection, endless dialogue-free scenes, and implausible car storage. The reviewer strongly advises against watching it.
+
+2. ""A train wreck to watch"" - This reviewer describes the movie as incoherent, senseless, and a waste of time. They compare watching it to waiting on a deserted train platform, emphasizing its poor quality and lack of redeeming features.
+
+3. ""Unbiased portrayal of old Indian traditions"" - This review focuses on the film's critical examination of certain Indian medical practices, pointing out inconsistencies such as charging for 'free' treatments and the implausibility of ingesting mercury without toxic effects.
+
+4. ""Boring and unconv",0
+2,1,2050,128,61.56465268135071,True,3676,0,"1. ""Late Night Shopping"" (tconst=tt0250491) - This film is criticized for its lack of engaging content and poor storytelling. The reviewer finds the plot moronic and the characters' actions illogical, particularly in a scenario involving shared living arrangements with a girlfriend.
+
+2. ""The Dinner Game"" (tconst=tt0250739) - This movie is panned for its poor comedic elements and subpar acting. The reviewer criticizes the script, delivery, and performances, particularly",0
+3,1,2050,176,57.13567781448364,True,3639,0,"1. ""I Saw the Devil"" (tconst=tt0267440) - This slasher movie is criticized for its stereotypical characters, illogical plot, and poor camera work. The FBI agent's dialogue is also mocked for being overly aggressive and unrealistic.
+
+2. ""Eva"" (tconst=tt0268288) - This film is panned for its mediocre acting, particularly the lead actress Ellen Fjaestad, who is criticized for her unnatural delivery and facial expressions. The story is also deemed predictable and lacking in surprises.
+
+3. ""The Negotiator"" (tconst=tt0269376) - This movie is rid",0
+4,1,2050,160,55.15932607650757,True,3801,0,"1. Star Trek: Enterprise - The pilot episode had potential but fell short due to a lack of grand adventure feel and excessive gunplay. The story could have been more focused on the historical significance of the first deep space mission. Scott Bakula's performance as Captain Archer was praised, though.
+
+2. May - This film received mixed reviews. Some appreciated Megan's character, a political science student trying to change the world, while others found her overly dramatic and crying excessively. The movie is described as a dark humor slasher film with excellent gore scenes for micro-budget standards but lacking in plot depth.
+
+3. Hundstage - This Austrian film was",0
+5,1,2050,192,61.53432083129883,True,3882,0,"1. The 1933 film adaptation of Alice in Wonderland is criticized for its lack of cohesion, unrecognizable actors, and missing elements from Lewis Carroll's original work. The reviewer recommends Disney's 1951 version instead.
+2. Jesse James at Bay (1941) starring Roy Rogers is described as having poor material that prevents a memorable performance from the lead actor. The reviewers praise Gale Storm and Sally Payne as the film's highlights.
+3. The reviewer finds The Big Sleep (1946) overrated, criticizing Humphrey Bogart's character for being inconsistent and clichéd. Lauren Bacall's performance is also panned, with the reviewer suggesting she was better suited for playing vampires than femme f",0
+6,1,2050,144,53.093844175338745,True,3909,0,"1. ""Pufnstuf"" was a children's television show that aired in the early 1970s, known for its unique character accents and puppetry. The plot revolved around Jimmy, a boy who encounters a magical flute-playing dragon named Pufnstuf on an island inhabited by strange creatures. The witch's desire for the flute was part of the show's fantasy narrative.
+
+2. ""A Town Called Hell"" is a Spaghetti Western film from 1971, directed by Giulio Petroni and starring Robert Sh",0
+7,1,2050,176,67.60167288780212,True,3797,0,"1. ""Prime Evil"" (1987) - This movie is a horror film with a mythical backstory involving an alligator-god, but the plot seems to lack consistency and coherence. The special effects for the alligator are criticized as being unrealistic.
+
+2. ""National Lampoon's Animal House"" (1978) - This comedy film is considered a classic by many, but the reviewer finds it depressing and lacking in humor. They specifically mention a scene involving rape with butter as offensive and unfunny.
+
+3. ""Pandemonium"" (1982) - A horror movie spoof that fails to deliver laughs, according to the reviewer. They compare it unfavorably to",0
+8,1,2050,176,54.19273400306702,True,3612,0,"1. ""My Soul to Take"" - This horror-comedy film received negative reviews from hardcore horror fans due to its lack of suspense, violence, and gore. Bruce Campbell's role was considered wasted, and the supporting cast was deemed terrible. The movie is not recommended for those who prefer serious horror films.
+
+2. ""The Evil Dead"" (1981) - Despite some technical competence in film-making, this low-budget horror film lacks artistic merit. The gore is decent for its budget range but is overdone and campy. The movie is considered trash and not recommended for serious horror fans.
+
+3. ""The Room"" - This film received a 0/10 rating",0
+9,1,2050,160,54.89461612701416,True,3691,0,"1. ""Beauty and the Beast: Belle's Magical World"" - The user expresses dissatisfaction with the animation quality and finds the film inferior to its predecessor, ""Beauty and the Beast."" They do not recommend watching the special edition due to their negative experience with the original version.
+
+2. ""Saving Grace"" - The user strongly dislikes this British comedy, describing it as a ""laugh-less"" film that fails to deliver humor despite the efforts of its cast. They advise against watching it, emphasizing that not all offbeat British comedies succeed.
+
+3. An unnamed film starring Dolph Lundgren - The user criticizes this action film for",0
+10,1,2050,144,52.38965392112732,True,3879,0,"1. ""Alive"" (tconst=tt0365960) - This film is not recommended due to poor acting, forced dialogue, and an unbelievable plot. The docudrama style does not enhance the believability of the story. The climax fails to create any sense of tension or fear, leaving viewers disappointed.
+
+2. ""Zero Day"" (tconst=tt0368078) - This movie is also not recommended. Despite its potential to shed light on the psychology behind criminal actions, it falls short in execution. The acting is abysmal,",0
+11,1,3911,128,76.44259572029114,True,3276,1,"movie_id=tt0455590: NO
+movie_id=tt0468464: NO
+movie_id=tt0469999: NO
+movie_id=tt0481280: NO
+movie_id=tt0485272: NO
+movie_id=tt0705295: YES (review mentions ""I Recommend this to anyone who likes a lot of talking and a lot of love from the shows they watch."")
+movie_id=tt0834896",0

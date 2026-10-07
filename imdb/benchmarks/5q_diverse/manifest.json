@@ -1,0 +1,91 @@
+{
+  "suite": "5q_diverse",
+  "question_count": 5,
+  "questions": [
+    {
+      "id": "q_01",
+      "directory": "q_01",
+      "catalog_directory": "q_02",
+      "semantic_task": "modern-drama performance praise",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Drama"
+        },
+        {
+          "column": "year",
+          "op": "ge",
+          "value": "1990"
+        }
+      ],
+      "ground_truth_count": 12
+    },
+    {
+      "id": "q_02",
+      "directory": "q_02",
+      "catalog_directory": "q_04",
+      "semantic_task": "long-action excitement",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Action"
+        },
+        {
+          "column": "runtime",
+          "op": "ge",
+          "value": "100"
+        }
+      ],
+      "ground_truth_count": 12
+    },
+    {
+      "id": "q_03",
+      "directory": "q_03",
+      "catalog_directory": "q_06",
+      "semantic_task": "soundtrack and score praise",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains_any",
+          "value": "Music|Musical"
+        }
+      ],
+      "ground_truth_count": 12
+    },
+    {
+      "id": "q_04",
+      "directory": "q_04",
+      "catalog_directory": "q_08",
+      "semantic_task": "science-fiction intellectual depth",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Sci-Fi"
+        }
+      ],
+      "ground_truth_count": 12
+    },
+    {
+      "id": "q_05",
+      "directory": "q_05",
+      "catalog_directory": "q_10",
+      "semantic_task": "family-film entertainment value",
+      "structured_filters": [
+        {
+          "column": "genres",
+          "op": "contains",
+          "value": "Family"
+        },
+        {
+          "column": "runtime",
+          "op": "le",
+          "value": "120"
+        }
+      ],
+      "ground_truth_count": 12
+    }
+  ]
+}

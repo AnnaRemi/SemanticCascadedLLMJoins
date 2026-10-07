@@ -1,0 +1,19 @@
+Q1: Which Drama movies released since 1990 have reviews commending the acting or cast performances?
+Semantic task: modern-drama performance praise
+Structured filters: [{"column": "genres", "op": "contains", "value": "Drama"}, {"column": "year", "op": "ge", "value": "1990"}]
+
+Q2: Which Action movies lasting at least 100 minutes have reviews calling them exciting, gripping, or suspenseful?
+Semantic task: long-action excitement
+Structured filters: [{"column": "genres", "op": "contains", "value": "Action"}, {"column": "runtime", "op": "ge", "value": "100"}]
+
+Q3: Which Music or Musical movies have reviews praising the soundtrack, score, music, or songs?
+Semantic task: soundtrack and score praise
+Structured filters: [{"column": "genres", "op": "contains_any", "value": "Music|Musical"}]
+
+Q4: Which Science-Fiction movies have reviews describing them as intelligent, philosophical, or thought-provoking?
+Semantic task: science-fiction intellectual depth
+Structured filters: [{"column": "genres", "op": "contains", "value": "Sci-Fi"}]
+
+Q5: Which Family movies under 121 minutes have reviews describing them as entertaining, enjoyable, or great fun?
+Semantic task: family-film entertainment value
+Structured filters: [{"column": "genres", "op": "contains", "value": "Family"}, {"column": "runtime", "op": "le", "value": "120"}]

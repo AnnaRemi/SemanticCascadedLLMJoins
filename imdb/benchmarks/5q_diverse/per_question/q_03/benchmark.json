@@ -1,0 +1,40 @@
+{
+  "benchmark_id": "canonical_10q_q06",
+  "difficulty": 3,
+  "difficulty_label": "medium_hard",
+  "question": "Which Music or Musical movies have reviews praising the soundtrack, score, music, or songs?",
+  "semantic_question": "Does the review praise the soundtrack, musical score, music, or songs?",
+  "suql_query": "SELECT movie_id, title, year, runtime, director, genres FROM movies WHERE (genres LIKE '%Music%' OR genres LIKE '%Musical%') AND answer(review, 'Does the review praise the soundtrack, musical score, music, or songs?') = 'Yes';",
+  "structured_filters": [
+    {
+      "column": "genres",
+      "op": "contains_any",
+      "value": "Music|Musical"
+    }
+  ],
+  "semantic_task": "soundtrack and score praise",
+  "semantic_annotation_patterns": [
+    "\\b(?:great|excellent|beautiful|amazing|wonderful|memorable) (?:soundtrack|score|music|songs?)\\b",
+    "\\bsoundtrack (?:is|was) (?:great|excellent|amazing|wonderful)\\b"
+  ],
+  "annotation_policy": "Deterministic lexical annotation; no evaluated LLM used",
+  "row_count": 100,
+  "structured_candidate_count": 40,
+  "semantic_positive_count": 42,
+  "ground_truth_movie_ids": [
+    "tt0028757",
+    "tt0029588",
+    "tt0047813",
+    "tt0049263",
+    "tt0067546",
+    "tt0088915",
+    "tt0090585",
+    "tt0371212",
+    "tt0379307",
+    "tt0388888",
+    "tt0443489",
+    "tt0485272"
+  ],
+  "suite_question_id": "q_03",
+  "catalog_question_id": "q_06"
+}

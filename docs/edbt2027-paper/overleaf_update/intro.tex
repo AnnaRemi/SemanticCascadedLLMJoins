@@ -1,0 +1,24 @@
+\section{Introduction}
+\label{sec:intro}
+Real-world query workloads increasingly rely on natural language (NL) interfaces that blend predicates over structured attributes (e.g., a movie's release year or genre) with predicates over unstructured text (e.g., user reviews). Classical sentiment analysis techniques~\cite{Chandan2025ACS} fail on ambiguous, indirect, or misleading language, such as sarcasm or negation, so Large Language Models (LLMs) have emerged as the operator of choice for the unstructured part. However, LLM inference incurs high latency and monetary cost, hence the need for methods that evaluate such hybrid queries efficiently without sacrificing answer quality.
+
+To illustrate such queries, consider the following representative question over a relational movie database:
+\begin{quote}
+\textit{``Which movies released in $1998$ received user reviews containing sarcastic, backhanded, or contextually negative feedback about the film's execution?''}
+
+\smallskip
+\noindent\textbf{Example Review:} \textit{``If your idea of a thrilling Friday night is sitting in a pitch-black theater for hours watching paint dry while listening to a self-important monologue on existential dread, then this absolute masterpiece of pure boredom is definitely the movie for you.''}
+\end{quote}
+Answering it requires a structured predicate $\sigma_S$ over schema attributes ($\text{year} = 1998$) and an unstructured semantic predicate $\sigma_U$ over free-text reviews, and is hard for three reasons. SQL engines cannot express $\sigma_U$: opinions are open-ended and evade keyword search. There is no relational schema or index that organizes reviews by tone. And delegating $\sigma_U$ to an LLM for every candidate tuple, or attempting unguided semantic joins over raw collections, incurs prohibitive latency and monetary cost.
+
+Existing frameworks sit at opposite ends of the cost-quality trade-off. SUQL~\cite{liu2023suql} compiles $\sigma_S$ into a SQL filter and evaluates $\sigma_U$ with one row-wise LLM call ($\mathtt{answer()}$) per surviving row: precise, since every candidate receives full model context, but the number of calls grows linearly, $O(|R_\sigma|)$, with the candidates. Trummer~\cite{trummer2025semanticjoin} avoids structured pushdown and prompts the LLM to evaluate $\sigma_S$ and $\sigma_U$ together over a batch of candidate rows in a single call: this drastically reduces the number of calls, but accuracy and recall drop because the model is overburdened with joining, filtering, and sentiment analysis in a single pass.
+
+We introduce a \textbf{cascaded semantic join architecture} that combines early relational pushdown with multi-level LLM execution, in two variants, \textsc{CasSuql} and \textsc{CasTrummer}, built on two contributions:
+\begin{enumerate}
+    \item \textbf{Structured Filter Pushdown and Batched Execution:} $\sigma_S$ is executed first, eliminating non-matching candidates for free before any LLM prompt is constructed; \textsc{CasTrummer} further batches the surviving rows into multi-item calls, amortizing the prompt prefix across candidates.
+    \item \textbf{Calibrated Multi-Stage Cascading:} A lightweight, cheap LLM stage precedes the full-context, larger LLM. To decide whether the cheap score is trustworthy, we fit Beta posteriors over the recall and precision of the cheap stage ($\hat{r}_\alpha(\tau), \hat{p}_\alpha(\tau)$) on a minimal calibration sample. This defines an ambiguity interval $[\tau_-, \tau_+]$: candidates outside the band are resolved by the cheap stage, and only ambiguous ones are escalated to full-context verification.
+\end{enumerate}
+
+Empirical evaluations on \textbf{IMDb} and \textbf{Amazon Fashion} show the benefit of cascading. On \textbf{IMDb}, \textsc{CasTrummer} cuts LLM calls by $81\%$ relative to \textsc{SUQL} at about the same wall-clock time, with the highest $F_1$ score ($0.713$, against $0.501$ for \textsc{SUQL} and $0.340$ for \textsc{Trummer}); on \textbf{Amazon Fashion}, it is the cheapest method in calls, time and dollars ($83\%$ fewer calls and $20\%$ less time than \textsc{SUQL}) and improves the $F_1$ of \textsc{Trummer} by $45\%$. \textsc{CasSuql} preserves the quality of \textsc{SUQL} and never issues more expensive calls, but it is slower ($1.8$--$1.9\times$).
+
+We review related work in \S\ref{sec:related}, introduce the query model and baselines in \S\ref{sec:preliminaries}, our cascades in \S\ref{sec:contributions}, report results in \S\ref{sec:eval}, and conclude in \S\ref{sec:conclusion}.

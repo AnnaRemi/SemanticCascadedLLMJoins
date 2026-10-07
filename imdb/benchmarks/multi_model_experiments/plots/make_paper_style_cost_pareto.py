@@ -57,6 +57,22 @@ METHOD_COLORS = {
 }
 DATASET_MARKERS = {"IMDb 10q": "o", "Amazon Fashion 10q": "^"}
 
+# Multiplies every font size (and the legend marker size). 1.0 reproduces the
+# original figures; ~2 keeps the text readable once the figure is shrunk to a
+# single column of the paper (set with --font-scale).
+FONT_SCALE = 1.0
+
+
+def apply_font_scale(scale: float) -> None:
+    global FONT_SCALE
+    FONT_SCALE = scale
+    base = plt.rcParams["font.size"]
+    plt.rcParams.update({
+        "font.size": base * scale,
+        "axes.titlesize": plt.rcParams["axes.titlesize"] if isinstance(plt.rcParams["axes.titlesize"], str) else base * scale,
+    })
+    # rcParams like "large"/"medium" scale with font.size, so only font.size is needed.
+
 
 def load(path: Path) -> pd.DataFrame:
     frame = pd.read_csv(path)
@@ -96,6 +112,18 @@ def _format_cost_axis(ax, use_log: bool) -> str:
     return "Estimated cost per question (USD; lower is better)"
 
 
+def add_footnote(fig) -> None:
+    """Footnote under the axes; wrapped onto two lines when fonts are enlarged."""
+    note = f"Marker area ∝ mean LLM calls per question. Compute estimate uses ${ACCELERATOR_USD_PER_HOUR:.2f}/accelerator-hour."
+    if FONT_SCALE > 1.4:
+        note = note.replace(". Compute", ".\nCompute")
+        fig.text(.5, .008, note, ha="center", va="bottom", fontsize=8 * FONT_SCALE)
+        fig.tight_layout(rect=(0, .11, 1, 1))
+    else:
+        fig.text(.5, .01, note, ha="center", fontsize=8)
+        fig.tight_layout(rect=(0, .05, 1, 1))
+
+
 def bubble_size(calls: np.ndarray) -> np.ndarray:
     return 180 + 35 * calls
 
@@ -125,18 +153,13 @@ def plot_single_dataset(frame: pd.DataFrame, dataset_label: str, path: Path) -> 
 
     handles = [
         plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=METHOD_COLORS[m],
-                   markeredgecolor="black", markersize=11, label=m)
+                   markeredgecolor="black", markersize=11 * FONT_SCALE, label=m)
         for m in METHOD_ORDER
     ]
     if len(frontier) > 1:
         handles.append(plt.Line2D([0], [0], linestyle="--", color="#333333", alpha=.7, label="Pareto frontier"))
-    ax.legend(handles=handles, loc="lower right", fontsize=9.5, framealpha=.9)
-    fig.text(
-        .5, .01,
-        f"Marker area ∝ mean LLM calls per question. Compute estimate uses ${ACCELERATOR_USD_PER_HOUR:.2f}/accelerator-hour.",
-        ha="center", fontsize=8,
-    )
-    fig.tight_layout(rect=(0, .05, 1, 1))
+    ax.legend(handles=handles, loc="lower right", fontsize=9.5 * FONT_SCALE * (0.8 if FONT_SCALE > 1.4 else 1), framealpha=.9)
+    add_footnote(fig)
     fig.savefig(path, dpi=220)
     plt.close(fig)
 
@@ -162,28 +185,26 @@ def plot_combined(frames: dict[str, pd.DataFrame], path: Path) -> None:
     use_log = _use_log(np.concatenate(all_costs))
     xlabel = _format_cost_axis(ax, use_log)
     ax.margins(x=0.22, y=0.12)
-    ax.set(title="Cost–F1 Pareto frontier, both datasets (10q, Gemma pair)", xlabel=xlabel,
+    ax.set(title=("Cost–F1 Pareto frontier (10q, Gemma pair)" if FONT_SCALE > 1.4
+                  else "Cost–F1 Pareto frontier, both datasets (10q, Gemma pair)"), xlabel=xlabel,
            ylabel="F1 (higher is better)", ylim=(-.03, 1.05))
     ax.grid(alpha=.25, which="both" if use_log else "major")
 
     method_handles = [
         plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=METHOD_COLORS[m],
-                   markeredgecolor="black", markersize=11, label=m)
+                   markeredgecolor="black", markersize=11 * FONT_SCALE, label=m)
         for m in METHOD_ORDER
     ]
     dataset_handles = [
         plt.Line2D([0], [0], marker=marker, color="w", markerfacecolor="#999999",
-                   markeredgecolor="black", markersize=11, label=label)
+                   markeredgecolor="black", markersize=11 * FONT_SCALE, label=label)
         for label, marker in DATASET_MARKERS.items()
     ]
     frontier_handle = [plt.Line2D([0], [0], linestyle="--", color="#333333", alpha=.7, label="Pareto frontier (per dataset)")]
-    ax.legend(handles=method_handles + dataset_handles + frontier_handle, loc="lower right", fontsize=9, framealpha=.9)
-    fig.text(
-        .5, .01,
-        f"Marker area ∝ mean LLM calls per question. Compute estimate uses ${ACCELERATOR_USD_PER_HOUR:.2f}/accelerator-hour.",
-        ha="center", fontsize=8,
-    )
-    fig.tight_layout(rect=(0, .05, 1, 1))
+    ax.legend(handles=method_handles + dataset_handles + frontier_handle, loc="lower right",
+              fontsize=9 * FONT_SCALE * (0.8 if FONT_SCALE > 1.4 else 1), framealpha=.9,
+              ncol=2 if FONT_SCALE > 1.4 else 1)
+    add_footnote(fig)
     fig.savefig(path, dpi=220)
     plt.close(fig)
 
@@ -193,7 +214,11 @@ def main() -> None:
     parser.add_argument("--imdb-aggregate", type=Path, default=IMDB_AGGREGATE)
     parser.add_argument("--amazon-aggregate", type=Path, default=AMAZON_AGGREGATE)
     parser.add_argument("--out-dir", type=Path, default=HERE)
+    parser.add_argument("--font-scale", type=float, default=1.0,
+                        help="multiply all font sizes (default 1.0; ~2 for a single-column paper figure)")
     args = parser.parse_args()
+    if args.font_scale != 1.0:
+        apply_font_scale(args.font_scale)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     frames = {

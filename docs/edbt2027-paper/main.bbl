@@ -1,0 +1,212 @@
+%%% -*-BibTeX-*-
+%%% Do NOT edit. File created by BibTeX with style
+%%% ACM-Reference-Format-Journals [18-Jan-2012].
+
+\begin{thebibliography}{13}
+
+%%% ====================================================================
+%%% NOTE TO THE USER: you can override these defaults by providing
+%%% customized versions of any of these macros before the \bibliography
+%%% command.  Each of them MUST provide its own final punctuation,
+%%% except for \shownote{}, \showDOI{}, and \showURL{}.  The latter two
+%%% do not use final punctuation, in order to avoid confusing it with
+%%% the Web address.
+%%%
+%%% To suppress output of a particular field, define its macro to expand
+%%% to an empty string, or better, \unskip, like this:
+%%%
+%%% \newcommand{\showDOI}[1]{\unskip}   % LaTeX syntax
+%%%
+%%% \def \showDOI #1{\unskip}           % plain TeX syntax
+%%%
+%%% ====================================================================
+
+\ifx \showCODEN    \undefined \def \showCODEN     #1{\unskip}     \fi
+\ifx \showDOI      \undefined \def \showDOI       #1{#1}\fi
+\ifx \showISBNx    \undefined \def \showISBNx     #1{\unskip}     \fi
+\ifx \showISBNxiii \undefined \def \showISBNxiii  #1{\unskip}     \fi
+\ifx \showISSN     \undefined \def \showISSN      #1{\unskip}     \fi
+\ifx \showLCCN     \undefined \def \showLCCN      #1{\unskip}     \fi
+\ifx \shownote     \undefined \def \shownote      #1{#1}          \fi
+\ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
+\ifx \showURL      \undefined \def \showURL       {\relax}        \fi
+% The following commands are used for tagged output and should be
+% invisible to TeX
+\providecommand\bibfield[2]{#2}
+\providecommand\bibinfo[2]{#2}
+\providecommand\natexlab[1]{#1}
+\providecommand\showeprint[2][]{arXiv:#2}
+
+\bibitem[\protect\citeauthoryear{Biswal, Patel, Jha, Kamsetty, Liu, Gonzalez,
+  Guestrin, and Zaharia}{Biswal et~al\mbox{.}}{2024}]%
+        {biswal2024tag}
+\bibfield{author}{\bibinfo{person}{Asim Biswal}, \bibinfo{person}{Liana Patel},
+  \bibinfo{person}{Siddarth Jha}, \bibinfo{person}{Amog Kamsetty},
+  \bibinfo{person}{Shu Liu}, \bibinfo{person}{Joseph~E. Gonzalez},
+  \bibinfo{person}{Carlos Guestrin}, {and} \bibinfo{person}{Matei Zaharia}.}
+  \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{Text2{SQL} is Not Enough: Unifying {AI} and
+  Databases with {TAG}}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2408.14717}}
+  (\bibinfo{year}{2024}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Chaudhuri and Shim}{Chaudhuri and
+  Shim}{1996}]%
+        {chaudhuri1996optimization}
+\bibfield{author}{\bibinfo{person}{Surajit Chaudhuri} {and}
+  \bibinfo{person}{Kyuseok Shim}.} \bibinfo{year}{1996}\natexlab{}.
+\newblock \showarticletitle{Optimization of Queries with User-Defined
+  Predicates}. In \bibinfo{booktitle}{\emph{Proceedings of the 22nd
+  International Conference on Very Large Data Bases (VLDB)}}.
+  \bibinfo{pages}{87--98}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Gao, Wang, Li, Sun, Qian, Ding, and Zhou}{Gao
+  et~al\mbox{.}}{2023}]%
+        {gao2023textosql}
+\bibfield{author}{\bibinfo{person}{Dawei Gao}, \bibinfo{person}{Haibin Wang},
+  \bibinfo{person}{Yaliang Li}, \bibinfo{person}{Xiuyu Sun},
+  \bibinfo{person}{Yichen Qian}, \bibinfo{person}{Bolin Ding}, {and}
+  \bibinfo{person}{Jingren Zhou}.} \bibinfo{year}{2023}\natexlab{}.
+\newblock \showarticletitle{Text-to-{SQL} Empowered by Large Language Models: A
+  Benchmark Evaluation}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2308.15363}}
+  (\bibinfo{year}{2023}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Hellerstein}{Hellerstein}{1998}]%
+        {hellerstein1998optimization}
+\bibfield{author}{\bibinfo{person}{Joseph~M. Hellerstein}.}
+  \bibinfo{year}{1998}\natexlab{}.
+\newblock \showarticletitle{Optimization Techniques for Queries with Expensive
+  Methods}.
+\newblock \bibinfo{journal}{\emph{ACM Transactions on Database Systems}}
+  \bibinfo{volume}{23}, \bibinfo{number}{2} (\bibinfo{year}{1998}),
+  \bibinfo{pages}{113--157}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Hellerstein and Stonebraker}{Hellerstein and
+  Stonebraker}{1993}]%
+        {hellerstein1993predicate}
+\bibfield{author}{\bibinfo{person}{Joseph~M. Hellerstein} {and}
+  \bibinfo{person}{Michael Stonebraker}.} \bibinfo{year}{1993}\natexlab{}.
+\newblock \showarticletitle{Predicate Migration: Optimizing Queries with
+  Expensive Predicates}. In \bibinfo{booktitle}{\emph{Proceedings of the 1993
+  ACM SIGMOD International Conference on Management of Data}}.
+  \bibinfo{pages}{267--276}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Liu, Russo, Cafarella, Cao, Chen, Chen,
+  Franklin, Kraska, Madden, and Vitagliano}{Liu et~al\mbox{.}}{2024}]%
+        {liu2024palimpzest}
+\bibfield{author}{\bibinfo{person}{Chunwei Liu}, \bibinfo{person}{Matthew
+  Russo}, \bibinfo{person}{Michael Cafarella}, \bibinfo{person}{Lei Cao},
+  \bibinfo{person}{Peter~Baille Chen}, \bibinfo{person}{Zui Chen},
+  \bibinfo{person}{Michael Franklin}, \bibinfo{person}{Tim Kraska},
+  \bibinfo{person}{Samuel Madden}, {and} \bibinfo{person}{Gerardo Vitagliano}.}
+  \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{A Declarative System for Optimizing {AI}
+  Workloads}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2405.14696}}
+  (\bibinfo{year}{2024}).
+\newblock
+\newblock
+\shownote{System later presented as Palimpzest at CIDR 2025.}
+
+
+\bibitem[\protect\citeauthoryear{Liu, Xu, Tjangnaka, Semnani, Yu, and Lam}{Liu
+  et~al\mbox{.}}{2023}]%
+        {liu2023suql}
+\bibfield{author}{\bibinfo{person}{Shicheng Liu}, \bibinfo{person}{Jialiang
+  Xu}, \bibinfo{person}{Wesley Tjangnaka}, \bibinfo{person}{Sina~J. Semnani},
+  \bibinfo{person}{Chen~Jie Yu}, {and} \bibinfo{person}{Monica~S. Lam}.}
+  \bibinfo{year}{2023}\natexlab{}.
+\newblock \showarticletitle{{SUQL}: Conversational Search over Structured and
+  Unstructured Data with Large Language Models}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2311.09818}}
+  (\bibinfo{year}{2023}).
+\newblock
+\newblock
+\shownote{Also in Findings of the Association for Computational Linguistics:
+  NAACL 2024.}
+
+
+\bibitem[\protect\citeauthoryear{Mishra and Eich}{Mishra and Eich}{1992}]%
+        {mishra1992join}
+\bibfield{author}{\bibinfo{person}{Priti Mishra} {and}
+  \bibinfo{person}{Margaret~H. Eich}.} \bibinfo{year}{1992}\natexlab{}.
+\newblock \showarticletitle{Join Processing in Relational Databases}.
+\newblock \bibinfo{journal}{\emph{Comput. Surveys}} \bibinfo{volume}{24},
+  \bibinfo{number}{1} (\bibinfo{year}{1992}), \bibinfo{pages}{63--113}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Patel, Jha, Guestrin, and Zaharia}{Patel
+  et~al\mbox{.}}{2024}]%
+        {patel2024lotus}
+\bibfield{author}{\bibinfo{person}{Liana Patel}, \bibinfo{person}{Siddharth
+  Jha}, \bibinfo{person}{Carlos Guestrin}, {and} \bibinfo{person}{Matei
+  Zaharia}.} \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{{LOTUS}: Enabling Semantic Queries with {LLM}s Over
+  Tables of Unstructured and Structured Data}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2407.11418}}
+  (\bibinfo{year}{2024}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Sanmartino, Urban, Papotti, and
+  Binnig}{Sanmartino et~al\mbox{.}}{2026}]%
+        {sanmartino2025stretto}
+\bibfield{author}{\bibinfo{person}{Gabriele Sanmartino},
+  \bibinfo{person}{Matthias Urban}, \bibinfo{person}{Paolo Papotti}, {and}
+  \bibinfo{person}{Carsten Binnig}.} \bibinfo{year}{2026}\natexlab{}.
+\newblock \showarticletitle{The {Stretto} Execution Engine for {LLM}-Augmented
+  Data Systems}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2602.04430}}
+  (\bibinfo{year}{2026}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Selinger, Astrahan, Chamberlin, Lorie, and
+  Price}{Selinger et~al\mbox{.}}{1979}]%
+        {selinger1979access}
+\bibfield{author}{\bibinfo{person}{P.~Griffiths Selinger},
+  \bibinfo{person}{Morton~M. Astrahan}, \bibinfo{person}{Donald~D. Chamberlin},
+  \bibinfo{person}{Raymond~A. Lorie}, {and} \bibinfo{person}{Thomas~G. Price}.}
+  \bibinfo{year}{1979}\natexlab{}.
+\newblock \showarticletitle{Access Path Selection in a Relational Database
+  Management System}. In \bibinfo{booktitle}{\emph{Proceedings of the 1979 ACM
+  SIGMOD International Conference on Management of Data}}.
+  \bibinfo{pages}{23--34}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Trummer}{Trummer}{2025}]%
+        {trummer2025semanticjoin}
+\bibfield{author}{\bibinfo{person}{Immanuel Trummer}.}
+  \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{Implementing Semantic Join Operators Efficiently}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2510.08489}}
+  (\bibinfo{year}{2025}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Urban and Binnig}{Urban and Binnig}{2024}]%
+        {urban2024eleet}
+\bibfield{author}{\bibinfo{person}{Matthias Urban} {and}
+  \bibinfo{person}{Carsten Binnig}.} \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{{ELEET}: Efficient Learned Query Execution over
+  Text and Tables}.
+\newblock \bibinfo{journal}{\emph{Proceedings of the VLDB Endowment}}
+  \bibinfo{volume}{17}, \bibinfo{number}{12} (\bibinfo{year}{2024}),
+  \bibinfo{pages}{4867--4880}.
+\newblock
+
+
+\end{thebibliography}

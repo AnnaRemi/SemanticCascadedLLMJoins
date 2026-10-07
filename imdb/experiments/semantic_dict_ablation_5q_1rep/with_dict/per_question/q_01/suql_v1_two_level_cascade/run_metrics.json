@@ -1,0 +1,30 @@
+{
+  "implementation": "suql_v1_two_level_cascade",
+  "mode": "llm",
+  "model": "ollama/granite3.2:2b->ollama/granite3.2:8b",
+  "cheap_model": "ollama/granite3.2:2b",
+  "expensive_model": "ollama/granite3.2:8b",
+  "cpu_seconds": 0.6679179999999998,
+  "engine_seconds": 163.53663391700002,
+  "wall_seconds": 163.54637725,
+  "llm_calls": 60,
+  "block_join_calls": 0,
+  "cheap_calls": 40,
+  "expensive_calls": 20,
+  "cheap_seconds": 64.61791333499998,
+  "expensive_seconds": 98.81727658000003,
+  "cheap_early_accepts": 1,
+  "cheap_early_rejects": 39,
+  "calibration_candidates": 20,
+  "calibration_expensive_calls": 20,
+  "calibration_expensive_accepts": 0,
+  "calibration_agreement": 1.0,
+  "final_answer_rows": 1,
+  "found_movie_ids": [
+    "tt0207051"
+  ],
+  "structured_candidates": 40,
+  "nonempty_fallback_rows": 0,
+  "question_dir": "q_01",
+  "question": "Which movies released in 2001 have reviews that explicitly recommend the movie?"
+}

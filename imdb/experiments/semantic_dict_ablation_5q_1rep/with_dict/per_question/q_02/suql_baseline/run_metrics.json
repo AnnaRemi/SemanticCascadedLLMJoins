@@ -1,0 +1,23 @@
+{
+  "implementation": "suql_baseline",
+  "mode": "llm",
+  "model": "ollama/granite3.2:8b",
+  "cheap_model": "",
+  "expensive_model": "ollama/granite3.2:8b",
+  "cpu_seconds": 0.5231319999999999,
+  "engine_seconds": 307.13133587500005,
+  "wall_seconds": 307.140843083,
+  "llm_calls": 40,
+  "block_join_calls": 0,
+  "cheap_calls": 0,
+  "expensive_calls": 40,
+  "final_answer_rows": 2,
+  "found_movie_ids": [
+    "tt0068837",
+    "tt0263005"
+  ],
+  "structured_candidates": 40,
+  "nonempty_fallback_rows": 0,
+  "question_dir": "q_02",
+  "question": "Which Horror movies under 100 minutes have reviews describing them as scary or frightening?"
+}

@@ -1,0 +1,14 @@
+Q1: Which bracelets are described by reviewers as adjustable enough to fit different wrist sizes?
+Semantic concept: adjustable_bracelet
+
+Q2: Which women's sweaters do reviewers describe as itchy or scratchy against the skin?
+Semantic concept: itchy_sweater
+
+Q3: Which leather wallets do reviewers describe as slim enough to carry in a pocket?
+Semantic concept: slim_wallet
+
+Q4: Which scarves do reviewers say arrived in a colour different from the pictures?
+Semantic concept: colour_mismatch_scarf
+
+Q5: Which leggings do reviewers say are sheer or see-through when stretched?
+Semantic concept: sheer_leggings

@@ -1,0 +1,48 @@
+{
+  "benchmark_id": "canonical_10q_q04",
+  "difficulty": 3,
+  "difficulty_label": "medium_hard",
+  "question": "Which Action movies lasting at least 100 minutes have reviews calling them exciting, gripping, or suspenseful?",
+  "semantic_question": "Does the review call the movie exciting, thrilling, gripping, or suspenseful?",
+  "suql_query": "SELECT movie_id, title, year, runtime, director, genres FROM movies WHERE genres LIKE '%Action%' AND runtime >= 100 AND answer(review, 'Does the review call the movie exciting, thrilling, gripping, or suspenseful?') = 'Yes';",
+  "structured_filters": [
+    {
+      "column": "genres",
+      "op": "contains",
+      "value": "Action"
+    },
+    {
+      "column": "runtime",
+      "op": "ge",
+      "value": "100"
+    }
+  ],
+  "semantic_task": "long-action excitement",
+  "semantic_annotation_patterns": [
+    "\\bexciting\\b",
+    "\\bthrilling\\b",
+    "\\bgripping\\b",
+    "\\bsuspenseful\\b",
+    "\\bedge of (?:my|your|the) seat\\b"
+  ],
+  "annotation_policy": "Deterministic lexical annotation; no evaluated LLM used",
+  "row_count": 100,
+  "structured_candidate_count": 40,
+  "semantic_positive_count": 42,
+  "ground_truth_movie_ids": [
+    "tt0069976",
+    "tt0075648",
+    "tt0101764",
+    "tt0116024",
+    "tt0172109",
+    "tt0187078",
+    "tt0203408",
+    "tt0331834",
+    "tt0421054",
+    "tt0431641",
+    "tt0459744",
+    "tt0995752"
+  ],
+  "suite_question_id": "q_02",
+  "catalog_question_id": "q_04"
+}

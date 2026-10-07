@@ -1,51 +1,42 @@
-\documentclass[sigconf,natbib=false]{acmart}
+\documentclass[sigconf]{acmart}
 
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds}
-\usepackage{pgfplots}
-\pgfplotsset{compat=1.17}
+\usetikzlibrary{arrows.meta,positioning}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{booktabs}
-\usepackage{listings}
 \usepackage{xcolor}
-\usepackage{amsmath,amssymb}
 \usepackage{url}
+\usepackage{indentfirst}
 \usepackage{xurl}
+\usepackage{multirow}
 \sloppy
-
-\lstdefinestyle{prompt}{
-  basicstyle=\ttfamily\scriptsize,
-  breaklines=true,
-  frame=single,
-  columns=fullflexible,
-  backgroundcolor=\color{gray!8}
-}
 
 % ACM boilerplate switched off / replaced by EDBT macros
 \settopmatter{printacmref=false}
 \renewcommand\footnotetextcopyrightpermission[1]{}
 \input{edbt-macros}
+\settopmatter{printfolios=true}
+\citestyle{acmnumeric}
 \microtypesetup{expansion=false,protrusion=true}
+\raggedbottom
 
 \begin{document}
 
-\title{Cost-Bounded Cascaded Query Execution over Structured and Unstructured Movie Data}
-\subtitle{Reconciling Predicate Pushdown and Batched Semantic Joins with Calibrated Two-Stage Cascades}
+\title{Cascaded Semantic Joins over Structured and Unstructured Data}
 
-\author{Anna}
+\author{Anna Remizova, Sihem Amer-Yahia, Silviu Maniu}
 \affiliation{%
-  \institution{Universit\'e Grenoble Alpes}
+  \institution{ CNRS, Univ. Grenoble Alpes}
   \city{Grenoble}
   \country{France}
 }
-\email{anna@example.edu}
 
 \begin{abstract}
-Answering natural-language questions that mix structured predicates (e.g.\ release year, film duration, genre) with unstructured predicates over free text (e.g.\ ``the reviews are strongly negative'') requires a query engine that can call a large language model (LLM) as a relational operator. Two execution strategies are commonly used: a \emph{predicate-pushdown} strategy that pushes structured filters into SQL and evaluates the semantic predicate with one LLM call per candidate row (the SUQL-style), and a \emph{batched-join} strategy that packs many rows into a single LLM call and asks the model to execute the whole predicate over a chunk of serialized rows at once (the Trummer-style batch join). We show empirically, on ten held-out, genre-diverse questions against a controlled, auditable $100$-movie pool per question (drawn from a $\sim$25k-row IMDb corpus with paired structured metadata and free-text reviews, each question run ten times per method), that the row-wise strategy is accurate but slow ($117.1$ calls and $115.6$s per question) while the batched strategy is faster ($96.9$ calls, $71.3$s) but visibly less accurate (F1 $0.444$ vs.\ $0.678$). We then utilize a \emph{two-level cascade} to introduce a fast, yet quality preserving pipeline that adds a structured SUQL-style filtering before the Trummer-style batch join block and finally a cheap, uncertainty-aware pre-filter in front of either strategy: rows (or batches) for which the cheap stage is confident are resolved immediately, and only the ones that fall inside a Bayesian-calibrated ambiguity interval are escalated to the expensive stage. Cascading the row-wise strategy (SUQL~V1) improves F1 by $2.7\%$ over the row-wise baseline using about $40\%$ fewer calls. Cascading the batched strategy (Trummer~V1) is the best overall design point: it reaches F1 $0.757$ ($+8.8\%$ over SUQL~V1, $+70.4\%$ over the batched baseline) and the best precision of all four variants ($+14.2\%$ over the row-wise cascade), while using only $1/26$ of the wall-clock time and $1/7$ of the LLM calls of the row-wise cascade, at the cost of a small ($\approx 7\%$) recall regression relative to it. We give the full architecture, pseudocode, prompts, and a Beta-posterior formalization of the calibrated cascade threshold that explains this cost--quality curve.
+Questions that combine conditions on structured attributes (a movie's year or genre) with conditions on unstructured text (its reviews) require a large language model (LLM) as a semantic operator. \textsc{Suql} evaluates the semantic condition with one LLM call per candidate row, which is accurate but expensive; the semantic join of Trummer packs many rows into each call, which is cheaper but less accurate. We propose two cascaded architectures, \textsc{CasSuql} and \textsc{CasTrummer}, that run the structured filter in the DBMS, score the semantic condition with a cheap LLM, and escalate to an expensive LLM only the rows inside an ambiguity band. The band is calibrated with Beta-posterior credible bounds on the recall and precision of the cheap stage, estimated from a small score-stratified sample. On \textit{IMDb} and \textit{Amazon Fashion} (ten questions, ten repetitions each), the calibrated cascades lose no recall: \textsc{CasSuql} matches the F1 of \textsc{Suql} ($-0.2\%$, $+2.1\%$) while sending fewer rows to the expensive model. \textsc{CasTrummer} improves the F1 of \textsc{Trummer} by 110\% and 45\%, issues 81--83\% fewer LLM calls than \textsc{Suql}, and lies on the cost--F1 Pareto front on both datasets. An ablation attributes its quality gain to structural filtering and batched expensive verification, and a cost model states when the cheap stage itself saves time.
 \end{abstract}
 
-\keywords{LLM query processing, structured-unstructured query language, cascaded inference, semantic operators, cost-based optimization, table QA}
+\keywords{LLM query processing, structured-unstructured query language, cascaded inference, semantic operators, cost-based optimization}
 
 \maketitle
 \thispagestyle{firstpagestyle}
@@ -53,537 +44,247 @@ Answering natural-language questions that mix structured predicates (e.g.\ relea
 \section{Introduction}
 \label{sec:intro}
 
-Consider the question
-\begin{quote}
-\emph{``Which movies released in 1998 have reviews expressing an overall negative, critical, or strongly unfavorable opinion of the movie?''}
-\end{quote}
-Answering it requires (i) a structured filter over a \texttt{year} column and (ii) a semantic filter over free-text review bodies that no SQL \texttt{WHERE} clause can express. Systems such as SUQL~\cite{suql} address this by compiling the semantic clause into an \texttt{answer()} user-defined function (UDF) backed by an LLM, and by pushing every structured predicate ahead of it so the UDF only ever sees the rows that could not be eliminated for free. ELEET~\cite{eleet} generalizes this to a \emph{multi-modal} operator model in which a single logical scan can pull evidence from more than one physical source (structured columns and free text) and fuse it before a selection is applied. Stretto~\cite{stretto} attacks the remaining cost of the semantic operator itself, proposing (a) Bayesian threshold calibration of the operator's accept/reject decision and (b) a KV-cache-aware execution ladder for the underlying model.
+Consider the question \emph{``Which movies released in 1998 have reviews expressing an overall negative opinion?''} It needs (i) a structured filter over a \texttt{year} column and (ii) a semantic filter over free-text reviews. No structured query language can express the second half: a negative opinion has no fixed vocabulary (negation, sarcasm and implication all express it) and no schema to index it by. It therefore has to be delegated to a large language model (LLM) used as a query operator.
 
-All code, prompts, and benchmark data in this paper are from the project repository at \url{https://github.com/AnnaRemi/ENSIMAG-AI-M2-final-project}, branch \texttt{agent/consolidate-four-method-benchmarks}, which this paper reports on directly rather than on a re-implementation.
-
-Our target workload -- an IMDb-derived pool of movies, each with structured metadata (year, genre, rating, cast) and a joined free-text review -- exposes a sharp trade-off between two execution strategies for the semantic predicate:
-
-\begin{description}
-\item[\textbf{SUQL baseline}] structured SQL first, then one LLM \texttt{answer()} call per surviving row. High quality, but the number of LLM calls equals the number of rows that survive the structured filter, and calls are serialized against the model, so wall-clock time is the dominant cost when structured selectivity is not very small.
-\item[\textbf{Trummer baseline}] the structured relation and the review relation are kept as two \emph{separate} collections, deliberately with \emph{no} structural pushdown, and the LLM is asked to join a block of one against a block of the other while applying the semantic predicate in the same call. This amortizes the fixed cost of a call over many rows and needs no pre-join of the two sources, but is materially less accurate: the model must recover row identity from block text and perform the join itself, over the \emph{entire} pool rather than a pre-filtered subset.
-\end{description}
-
-Both of these are implemented and benchmarked in our stack (\S\ref{sec:baselines}). The central contribution of this paper is a \textbf{two-level cascade} that can be layered on top of either baseline: a cheap stage classifies each unit of work (row or batch) and only escalates the units whose calibrated confidence falls inside an ambiguity band to the expensive stage. We derive the calibration rule from a Beta posterior over the cheap stage's empirical recall/precision (\S\ref{sec:cascade-math}), following the gradient-free half of Stretto's contribution, and -- new in this revision -- we prove a general condition under which calibrated cascading is \emph{guaranteed} to reduce both calls and wall time relative to an all-expensive baseline once the candidate pool is large enough (\S\ref{sec:asymptotic-dominance}).
-
-\smallskip\noindent\textbf{Contributions.}
-\begin{enumerate}
-\item An apples-to-apples benchmark of predicate-pushdown vs.\ LLM-driven join execution across ten held-out, genre-diverse questions (ten repetitions each), with matched result sets and a shared metric suite (\S\ref{sec:eval}).
-\item A two-level cascade architecture, applicable to both execution strategies, with a closed-form Bayesian calibration rule for the escalation band (\S\ref{sec:cascade-math}).
-\item A formal proof that calibrated cascading beats an all-expensive baseline for large enough candidate pools -- in expectation, via a finite crossover point, and with high, exponentially-growing probability beyond it -- together with a worked instantiation from measured system constants that predicts, rather than merely describes, the observed asymmetry between our two cascades (\S\ref{sec:asymptotic-dominance}).
-\item An empirical characterization of the four resulting design points showing the cascaded, structurally-filtered join design (Trummer~V1) dominates on cost, F1, \emph{and} worst-case robustness across ten diverse questions (\S\ref{sec:results}).
-\end{enumerate}
+Two strategies exist. \textsc{Suql}~\cite{liu2023suql} compiles the structured half into SQL and calls the LLM once per surviving row, which gives high quality but a number of calls that grows with the candidates. Trummer~\cite{trummer2025semanticjoin} has the LLM join blocks of the two collections in one call, which needs far fewer calls but is less accurate, because one call must match rows, check the structured condition and judge the text. We build on both and add a cascade: a cheap stage scores each unit of work, and only units inside a calibrated ambiguity band reach the expensive stage. Our contributions, and what they buy, are:
+\begin{itemize}
+  \item \textbf{Calibrated cascades, \textsc{CasSuql} and \textsc{CasTrummer}.} Both run $\sigma_S$ in the DBMS first. The ambiguity band is derived from Beta-posterior credible bounds on the cheap stage's recall and precision, computed from 20 labeled rows stratified by cheap score, whose expensive answers are reused. A weak calibration can only cost money, never quality (\S\ref{sec:cascade-math}).
+  \item \textbf{Quality with fewer calls.} \textsc{CasSuql} reproduces the quality of \textsc{Suql} while sending 5--14\% fewer rows to the expensive model, with no loss of recall. \textsc{CasTrummer} improves the F1 of \textsc{Trummer} by 110\% on \textit{IMDb} and 45\% on \textit{Amazon Fashion} with 28\% and 8\% fewer calls, issues 81--83\% fewer calls than \textsc{Suql}, and sits on the cost--F1 Pareto front of both datasets (\S\ref{sec:results}).
+  \item \textbf{An explicit account of when the cascade pays off.} A cost model gives a break-even condition for the cheap stage, and an ablation separates the contribution of the cheap stage from that of structural filtering and batched verification (\S\ref{sec:cost}, \S\ref{sec:results}).
+\end{itemize}
+The rest of the paper reviews related work (\S\ref{sec:related}), the query model and baselines (\S\ref{sec:prelim}), the cascaded architectures and their calibration (\S\ref{sec:contributions}), and the experiments (\S\ref{sec:eval}).
 
 \section{Related Work}
 \label{sec:related}
 
-\textbf{SUQL.} SUQL~\cite{suql} extends SQL with a free-text \texttt{answer()} predicate function and shows that pushing structured predicates ahead of the semantic one is the dominant lever for controlling LLM invocation cost, because it shrinks the candidate set the expensive operator has to see. Our SUQL baseline and V1 variants follow this pushdown discipline; our contribution is the cascade layered on top of the (already pushed-down) semantic operator itself.
+\textbf{Avoiding LLM calls on rows a cheap check could reject.}
+SUQL~\cite{liu2023suql} extends SQL with a free-text \texttt{answer()} function and shows that evaluating structured predicates before semantic ones is the dominant lever for controlling LLM cost, since it shrinks the candidate pool before the expensive operator. Our SUQL baseline follows this structure directly; our contribution is layering a cascade on top of the semantic operator itself, once filtering has already made the pool as small as it can.
 
-\textbf{ELEET.} ELEET~\cite{eleet} treats a semantic scan as a \emph{multi-modal operator} that can read structured and unstructured evidence for the same logical entity from separate physical sources, and formalizes an operator cascade with cost- and selectivity-aware reordering. We adopt its operator-cascade abstraction (\S\ref{sec:cascade-math}) and its log-odds parametrization of a semantic filter's accept/reject decision; the Trummer baseline's two-collection join (\S\ref{sec:trummer-baseline}) is exactly the two-source retrieval setting ELEET's abstraction targets.
+\textbf{Avoiding one LLM call per row in the first place.} Trummer~\cite{trummer2025semanticjoin} treats semantic filtering as a block-nested-loops join: the LLM gets a batch of rows from each side at once and returns every match in a single call, with an adaptive batch size chosen to fit the model's context budget. Our Trummer baseline implements this algorithm directly; \textsc{CasTrummer} keeps its batching but adds structured filtering and calibrated escalation on top.
 
-\textbf{Stretto.} Stretto~\cite{stretto} contributes (1) a Bayesian calibration procedure that turns raw model log-odds into a credible interval on precision/recall using a Beta posterior, and (2) a KV-cache-aware execution ladder (\emph{Expected Attention Press}) that reorders and prunes semantic operators at the level of attention state reuse. Contribution (1) is backend-agnostic and is the one we build on (fully, for SUQL~V1; a simpler point-estimate variant is currently used by Trummer~V1, \S\ref{sec:trummer-v1}); contribution (2) requires direct access to model weights/attention state (e.g.\ via \texttt{vllm}) and is not portable to an Ollama-served backend without replacing the serving layer, so we defer it to future work (\S\ref{sec:future}). Neither Stretto nor the systems it builds on state a formal condition for \emph{when} a calibrated cascade is guaranteed to reduce cost; \S\ref{sec:asymptotic-dominance} closes this gap.
+\textbf{Combining evidence from more than one source.}
+ELEET~\cite{urban2024eleet} treats a semantic scan as a multi-modal operator, reading structured and unstructured evidence for the same entity from separate sources before selecting. It also gives a cost-aware reordering rule for a sequence of operators, which we reuse (\S\ref{sec:contributions}) to order the stages of \textsc{CasTrummer}.
 
-\section{Baseline Architectures}
-\label{sec:baselines}
+\textbf{Deciding when a cheap stage can be trusted.} A hand-picked threshold gives no guarantee. Stretto~\cite{sanmartino2025stretto} calibrates a cheap stage with a Beta posterior over a log-odds score and adds a KV-cache-aware execution ladder; we build on the former, extended to a score-stratified sample (\S\ref{sec:cascade-math}), and skip the latter, which needs attention-state access our Ollama backend does not give. Other approaches calibrate on large validation sets with accuracy guarantees~\cite{zeighami2026bargain}, isotonic regression~\cite{kotte2026ucci}, learned proxy scores~\cite{zhang2025scaledoc} or learned routers~\cite{chen2023frugalgpt}; our setting must recalibrate for every question from a handful of labels.
 
-Figure~\ref{fig:baselines} shows the two baseline pipelines.
+\textbf{Classical query optimization.} Filtering ahead of an expensive operator goes back to cost-based join ordering~\cite{selinger1979access}, expensive-predicate scheduling~\cite{hellerstein1993predicate,hellerstein1998optimization,chaudhuri1996optimization} and the per-pair join cost it avoids~\cite{mishra1992join}. Text-to-SQL systems~\cite{gao2023textosql} handle only the structured half, a gap TAG~\cite{biswal2024tag} names explicitly; LOTUS~\cite{patel2024lotus} and Palimpzest~\cite{liu2024palimpzest} come closest to us, optimizing a full plan of declarative semantic operators with cost-based model choice and batching, whereas we optimize structured and unstructured predicates in tandem.
 
-\begin{figure*}[t]
-\centering
-\resizebox{0.92\textwidth}{!}{%
-\begin{tikzpicture}[
-  node distance=6mm and 6mm,
-  box/.style={draw, rounded corners, align=center, minimum height=8mm, font=\small, fill=blue!6},
-  llmbox/.style={draw, rounded corners, align=center, minimum height=8mm, font=\small, fill=orange!12},
-  arr/.style={-{Latex[length=2mm]}}
-]
-\node[box] (q) {NL query};
-\node[box, right=of q] (parse) {Predicate\\extraction};
-\node[box, right=of parse] (sql) {Structured\\filter (SQL)};
-\node[llmbox, right=of sql] (udf) {\texttt{answer()}\\per row};
-\node[box, right=of udf] (out) {Result set};
-\draw[arr] (q)--(parse)--(sql)--(udf)--(out);
+\section{Preliminaries}
+\label{sec:prelim}
 
-\node[box, below=14mm of parse] (r1) {Collection 1:\\structured rows};
-\node[box, below=6mm of r1] (r2) {Collection 2:\\review rows};
-\node[llmbox, right=14mm of r1] (join) {LLM block-pair join:\\match id, apply\\predicate, emit\\\texttt{id: YES/NO}};
-\node[box, right=of join] (out2) {Parsed\\result set};
-\draw[arr] (r1) -- (join);
-\draw[arr] (r2) -- (join);
-\draw[arr] (join) -- (out2);
-\end{tikzpicture}
-}
-\caption{Top: SUQL baseline (row-wise \texttt{answer()} after pushdown). Bottom: Trummer baseline -- no pushdown; the LLM joins a block of each collection and applies the predicate in one call.}
-\label{fig:baselines}
-\end{figure*}
+\textbf{Query model.} Let $S(\underline{\mathit{id}}, A_1,\dots,A_k)$ be a relation with structured attributes and $U(\mathit{id}, \mathit{txt})$ a relation of unstructured text. A question $Q = (\sigma_S,\sigma_U)$ has a structured predicate $\sigma_S$, answerable in a DBMS, and a semantic predicate $\sigma_U$ over $\mathit{txt}$, delegated to an LLM. Its answer is $\mathrm{Ans}(Q) := \pi_{\mathit{id}}\left(\sigma_S(S) \bowtie_{\mathit{id}} \sigma_U(U)\right)$. We assume the predicates are evaluated on disjoint evidence, so their selectivities are independent, and that $\sigma_S$ is far cheaper than $\sigma_U$: all methods try to spend as few LLM calls on $\sigma_U$ as possible. Predicate extraction, which maps a natural-language question to $(\sigma_S,\sigma_U)$, is a single LLM call shared by the four methods, which therefore differ only in how they compute $\mathrm{Ans}(Q)$.
 
-\subsection{SUQL baseline: predicate pushdown}
-Structured predicates are compiled to a \texttt{WHERE} clause and executed once against an in-memory SQLite instance. For every surviving row, one \texttt{answer(review, question)} call is issued to the LLM (Listing~\ref{lst:suql-prompt}), which returns \texttt{YES}/\texttt{NO}. Cost is $O(|R_\sigma|)$ calls, where $R_\sigma$ is the structurally filtered relation; quality is close to the ceiling because every row is judged individually, in full context, with an explicitly recall-first evidence-retrieval framing.
+\textbf{\textsc{Suql}.} $\sigma_S$ becomes a \texttt{WHERE} clause, yielding candidates $R_\sigma = \sigma_S(S)$; the LLM is called once per candidate through \texttt{answer(txt, question)}, for $O(|R_\sigma|)$ calls. Each row is judged alone with its full text, so quality is close to the best achievable, but the cost cannot be reduced because no work is shared across rows.
 
-\begin{lstlisting}[style=prompt, caption={\texttt{answer()} system prompt, verbatim from the implementation (SUQL baseline).}, label={lst:suql-prompt}]
-You are a recall-first semantic filter for movie reviews.
-Decide whether the review provides evidence that the movie
-satisfies the question. Answer YES for direct wording, a
-synonym/paraphrase, a described example, or a reasonable
-implication; count explicit mentions even when negated,
-qualified, or critical (evidence retrieval, not sentiment
-scoring). Answer NO when support is absent, generic, or
-based only on genre/topic. Return exactly YES or NO.
-\end{lstlisting}
-
-\subsection{Trummer baseline: adaptive two-collection block join}
-\label{sec:trummer-baseline}
-Unlike the SUQL baseline, the Trummer baseline applies \emph{no} structural pushdown: the structured relation and the review relation are kept as two separate collections, partitioned independently into blocks, and the LLM is asked to join one block of each and apply the semantic predicate in a single call (Listing~\ref{lst:trummer-prompt}), returning one \texttt{movie\_id: YES/NO} decision per line. Block sizes are chosen by an adaptive tuning routine that also checks response coverage and re-partitions when a block's decisions are incomplete. Because the whole $100$-row candidate pool (not just the $40$ rows that satisfy $\sigma_S$) must be covered by block pairs, call counts scale with pool size and vary substantially with how often coverage checks trigger a retry ($30$--$268$ calls across our ten questions). Two systematic error sources follow directly from this design: (a) a block pair's response may echo a \texttt{movie\_id} that does not exactly match any input row (join/parsing drift), and (b) the model may decide only part of a block before drifting, undercounting true positives -- the dominant driver of the baseline's low recall.
-
-\begin{lstlisting}[style=prompt, caption={Block-join prompt, verbatim from \texttt{operators.py} (Trummer baseline).}, label={lst:trummer-prompt}]
-Find every movie in Collection 1 that has a review in
-Collection 2 satisfying this predicate: {predicate}
-Act as a recall-first semantic filter, while requiring
-review-specific evidence. [...evidence-retrieval rules,
-identical in spirit to Listing 1...]
-A review belongs to a movie only when tconst is exactly
-equal to movie_id. Return one decision per line as:
-movie_id: YES or movie_id: NO.
-Collection 1: {block_1_rows}
-Collection 2: {block_2_rows}
-Decisions:
-\end{lstlisting}
-
-\section{Cascaded Architectures (V1)}
-\label{sec:cascade}
-
-Both V1 variants add the same structural idea --- a \emph{two-level cascade} --- in front of the semantic operator of their respective baseline.
+\textbf{\textsc{Trummer}.} No structured filter is applied. The two relations are partitioned into blocks and each call receives one block of each, like a block nested-loop join; the model must match rows by id, evaluate $\sigma_S$ without a query engine, and evaluate $\sigma_U$. This divides the number of calls by roughly the block size, but the three tasks in one call cost quality: the model tends to rely on the structured condition alone or on superficial keywords.
 
 \begin{figure}[t]
 \centering
 \resizebox{\columnwidth}{!}{%
 \begin{tikzpicture}[
-  node distance=4mm and 4mm,
-  box/.style={draw, rounded corners, align=center, minimum height=8mm, font=\scriptsize, fill=blue!6},
-  cheap/.style={draw, rounded corners, align=center, minimum height=8mm, font=\scriptsize, fill=green!12},
-  exp/.style={draw, rounded corners, align=center, minimum height=8mm, font=\scriptsize, fill=orange!14},
-  dec/.style={draw, diamond, align=center, font=\scriptsize, fill=yellow!15, inner sep=1pt},
+  node distance=6mm and 6mm,
+  tbl/.style={draw, rounded corners, align=left, font=\scriptsize, inner sep=2mm, fill=blue!6},
+  outbox/.style={draw, rounded corners, align=left, font=\scriptsize, inner sep=2mm, fill=orange!10, text width=3.6cm},
   arr/.style={-{Latex[length=2mm]}}
 ]
-\node[box] (in) {Units\\$u_1,\dots,u_n$};
-\node[cheap, below=of in] (cheap) {Stage 1: cheap\\$\to$ log-odds $\ell$};
-\node[dec, below=of cheap] (dec) {$\ell$ in $[\tau_-,\tau_+]$?};
-\node[exp, right=8mm of dec] (exp) {Stage 2:\\expensive verify};
-\node[box, left=8mm of dec] (accept) {Accept/\\reject};
-\node[box, below=10mm of dec] (out) {Merged\\result};
-\draw[arr] (in)--(cheap)--(dec);
-\draw[arr] (dec) -- node[above,font=\tiny]{yes} (exp);
-\draw[arr] (dec) -- node[above,font=\tiny]{no} (accept);
-\draw[arr] (exp) |- (out);
-\draw[arr] (accept) |- (out);
+\node[tbl] (R) {
+  \begin{tabular}{lll}
+    \textbf{id} & \textbf{year} & \textbf{genre}\\
+    \texttt{tt0100} & 1998 & Drama\\
+    \texttt{tt0101} & 1998 & Comedy\\
+    \texttt{tt0102} & 2004 & Drama\\
+    \texttt{tt0103} & 2011 & Action
+  \end{tabular}
+};
+\node[font=\Large, right=6mm of R] (bowtie) {$\bowtie_{\text{id}}$};
+\node[tbl, right=6mm of bowtie] (T) {
+  \begin{tabular}{ll}
+    \textbf{id} & \textbf{review (excerpt)}\\
+    \texttt{tt0100} & ``...grim film...''\\
+    \texttt{tt0101} & ``...crowd-pleaser...''\\
+    \texttt{tt0102} & ``...most depressing...''\\
+    \texttt{tt0103} & ``...popcorn fun...''
+  \end{tabular}
+};
+\node[font=\scriptsize, above=1mm of bowtie] (q) {filter: $\sigma_S\!\wedge\!\sigma_U$};
+\node[outbox, below left=12mm and 4mm of bowtie] (suqlout) {
+  \textbf{SUQL baseline output}\\[2pt]
+  $\sigma_S$ applied first, one row per call:\\
+  \texttt{tt0100}: YES\\
+  \texttt{tt0101}: NO\\
+  \texttt{tt0102}, \texttt{tt0103}: never scored\\[2pt]
+  $\mathrm{Ans} = \{\texttt{tt0100}\}$ \textcolor{green!45!black}{(correct)}
+};
+\node[outbox, below right=12mm and 4mm of bowtie] (trumout) {
+  \textbf{Trummer baseline output}\\[2pt]
+  one block call, no $\sigma_S$ pushdown:\\
+  \texttt{tt0100}: YES\\
+  \texttt{tt0101}: NO\\
+  \texttt{tt0102}: YES \textcolor{red}{(wrong year!)}\\
+  \texttt{tt0103}: NO\\[2pt]
+  $\mathrm{Ans} = \{\texttt{tt0100},\texttt{tt0102}\}$ \textcolor{red}{(false positive)}
+};
+\draw[arr] (R) -- (bowtie);
+\draw[arr] (T) -- (bowtie);
+\draw[arr] (bowtie) -- (suqlout);
+\draw[arr] (bowtie) -- (trumout);
 \end{tikzpicture}
 }
-\caption{Two-level cascade shared by SUQL~V1 ($B{=}1$) and Trummer~V1 ($B{=}8$, batched).}
-\label{fig:cascade}
+\caption{The running example as a join.}
+\label{fig:example-join}
 \end{figure}
 
-\subsection{SUQL~V1: cascaded predicate pushdown}
-After structural pushdown, a cheap stage scores every surviving row with a single-token, logprob-based probe (\texttt{max\_tokens=1}; the log-odds is the difference of the model's own log-probabilities for the \texttt{1}/\texttt{0} completion tokens, not a self-reported number). Rows with $|\ell_i|$ outside the calibrated band are resolved without any further LLM call; only rows inside the band are escalated to a full \texttt{answer()} call. This is strictly a \emph{subset} of the row-wise baseline's LLM calls ($B{=}1$, one cheap call per row), so SUQL~V1 can only use fewer or equal \emph{expensive} calls than the baseline; wall-clock time can still grow substantially, because (\S\ref{sec:asymptotic-dominance}) the cheap stage's own per-row latency here exceeds the expensive stage's per-call latency -- a single-token completion still pays the full prompt-prefill cost of a review-length input.
+\begin{example}[Running example]
+\label{ex:running}
+For the question above, Figure~\ref{fig:example-join} shows four movies joined with one review each, one per row category used in our benchmark (\S\ref{sec:setup}): \texttt{tt0100} (1998, ``grim film'') is a \emph{true positive}; \texttt{tt0101} (1998, ``crowd-pleaser'') satisfies $\sigma_S$ but not $\sigma_U$; \texttt{tt0102} (2004, ``most depressing'') satisfies only $\sigma_U$; \texttt{tt0103} (2011, ``popcorn fun'') satisfies neither. \textsc{Suql} applies $\sigma_S$ first and judges only \texttt{tt0100} and \texttt{tt0101}, so $\mathrm{Ans}=\{\texttt{tt0100}\}$. \textsc{Trummer} hands all four rows to one call, which must match rows, apply $\sigma_S$ and apply $\sigma_U$ at once; a model that tracks the sentiment but drops the year check also accepts \texttt{tt0102}, a false positive.
+\end{example}
 
-\subsection{Trummer~V1: cascaded, structured, batched join}
-\label{sec:trummer-v1}
-Trummer~V1 (i) adds an explicit structured filter \emph{before} any LLM call -- the one variant in the Trummer family that gets SUQL-style pushdown; (ii) batches candidates ($B{=}8$ rows/call) and asks for a direct three-way \texttt{YES}/\texttt{NO}/\texttt{UNCERTAIN} label per row rather than a continuous score; (iii) re-verifies \texttt{UNCERTAIN} (or low-confidence) rows in a batched expensive pass. Its threshold is learned by a point-estimate agreement search rather than SUQL~V1's Beta-posterior bound (\S\ref{sec:beta-posterior}) -- unifying the two is future work. This is why Trummer~V1 is faster \emph{and} more accurate than its baseline at once: structural pushdown shrinks the pool before any call runs, batching amortizes prompt overhead across $8$ rows per call, and the verification pass repairs the join baseline's characteristic recall loss.
+\section{Cascaded Architectures}
+\label{sec:contributions}
+
+Both cascades share the structure of Algorithm~\ref{alg:cascade}. The structured filter runs first in the DBMS. A \emph{cheap stage} then scores every surviving row with a log-odds $\ell = \log\frac{p}{1-p}$, a calibrated \emph{band} $(\tau_-,\tau_+)$ routes rows (accept if $\ell \ge \tau_+$, reject if $\ell \le \tau_-$), and an \emph{expensive stage} judges only the rows inside the band. A side of the band that calibration cannot certify is left open ($\tau_+{=}{+}\infty$ or $\tau_-{=}{-}\infty$), so no row is decided by a cheap stage that has not been shown reliable.
 
 \begin{algorithm}[t]
-\caption{Two-level cascaded semantic filter}
+\caption{Cascade (\textsc{CasSuql}: $B{=}B'{=}1$; \textsc{CasTrummer}: batches $B$, $B'$)}
 \label{alg:cascade}
 \begin{algorithmic}[1]
-\Require rows $R_\sigma$, predicate $P$, cheap scorer $f_1$, expensive operator $f_2$, calibration set $C$, target quality $Q^\ast$
-\State $(\tau_-, \tau_+) \gets \textsc{CalibrateBand}(f_1, C, Q^\ast)$ \Comment{\S\ref{sec:cascade-math}}
-\State $\mathit{Accept}, \mathit{Escalate} \gets \emptyset,\emptyset$
-\For{$r \in R_\sigma$}
-  \State $\ell \gets \operatorname{logit}(f_1(r, P))$
-  \If{$\ell \ge \tau_+$} \State $\mathit{Accept} \gets \mathit{Accept} \cup \{r\}$
-  \ElsIf{$\ell > \tau_-$} \State $\mathit{Escalate} \gets \mathit{Escalate} \cup \{r\}$
-  \EndIf
+\Require rows $R_\sigma$ passing $\sigma_S$; batch sizes $B,B'$; calibration size $|C|$; target $Q^\ast$, level $\alpha$
+\State score every row with $\mathrm{Cheap}$ in batches of $B$ $\to$ $\ell_r$
+\State $C \gets$ $|C|$ rows stratified by $\ell$; $y_C \gets \mathrm{Expensive}(C)$ \Comment{labels are kept as final answers}
+\State $(\tau_-,\tau_+) \gets \mathrm{FitBand}(\ell, y_C, Q^\ast, \alpha)$ \Comment{\S\ref{sec:cascade-math}}
+\State $\mathrm{Ans} \gets \{r \in C: y_r{=}\texttt{YES}\} \cup \{r \notin C: \ell_r \ge \tau_+\}$
+\For{batch $b \subset \{r \notin C : \tau_- < \ell_r < \tau_+\}$, $|b| \le B'$}
+  \State $\mathrm{Ans} \gets \mathrm{Ans} \cup \{r \in b : \mathrm{Expensive}(b)_r = \texttt{YES}\}$ \Comment{split and retry if the answer is unusable}
 \EndFor
-\For{$r \in \mathit{Escalate}$} \Comment{Only ambiguous rows reach the LLM}
-  \If{$f_2(r, P) = \textsc{Yes}$} \State $\mathit{Accept} \gets \mathit{Accept} \cup \{r\}$ \EndIf
-\EndFor
-\State \Return $\mathit{Accept}$
+\State \Return $\mathrm{Ans}$
 \end{algorithmic}
 \end{algorithm}
 
-\section{Calibrating the Cascade}
+\textbf{\textsc{CasSuql}} scores each row in one single-token call. The log-odds come from the answer-token log-probabilities: we pool all \texttt{Yes}-like and all \texttt{No}-like spellings among the ten most likely first tokens. The calibration rows keep their expensive answer, so no row is judged twice, and \textsc{CasSuql} never issues more expensive calls than \textsc{Suql}.
+
+\textbf{\textsc{CasTrummer}} changes three things in \textsc{Trummer}. (1) \emph{Structured filter:} $\sigma_S$ runs in the DBMS, so no context is spent on rows it rejects, and the false positive \texttt{tt0102} of the example can no longer be admitted. (2) \emph{Batched cheap pass:} one call per batch of $B$ rows returns \texttt{YES}, \texttt{NO} or \texttt{UNCERTAIN} per row (mapped to $\ell=+2,0,-2$); allowing \texttt{UNCERTAIN} sends rows with indirect evidence to the expensive stage instead of labeling them \texttt{NO}. In the example, \texttt{tt0101} is rejected and the sarcastic review of \texttt{tt0100} is escalated and accepted. (3) \emph{Batched expensive verification:} escalated rows are verified in batches of $B'$. If a batch's answer is unusable (the prompt overflowed the context and the model omitted row ids), it is split in two and each half retried, so no candidate is silently dropped; every retry counts as an expensive call.
+
+Filtering with $\sigma_S$ first is the classical rule of ordering selections by ascending $c_i/(1-s_i)$~\cite{hellerstein1993predicate,urban2024eleet}: $\sigma_S$ is nearly free and selective.
+
+\subsection{Cost Analysis}
+\label{sec:cost}
+We count LLM calls, which dominate the cost. Let $N=|S|$ and $|R_\sigma|=sN$. \textsc{Trummer} is a block nested-loop join~\cite{garcia2008database,ramakrishnan2003database} and issues $O(N^2/(b_Sb_U))$ calls whatever $s$ is. The other methods are linear in $sN$: \textsc{Suql} issues $sN$ calls, \textsc{CasSuql} $sN$ cheap and $O(e\,sN)$ expensive calls, and \textsc{CasTrummer} $O(sN/B)$ cheap and $O(e\,sN/B')$ expensive calls, where $e$ is the escalated fraction. Calibration calls are not extra, since the calibration rows keep their expensive answer. The cascade saves expensive calls on the fraction $d=1-e$ of rows the cheap stage decides alone. In wall-clock time, a row-wise cascade pays $t_c$ per row for the cheap call and $t_e$ for the escalated rows, against $t_e$ per row for \textsc{Suql}, so it is faster exactly when
+\[ t_c / t_e < d. \]
+
+\subsection{Calibrating the Cascade}
 \label{sec:cascade-math}
+For each question, $|C|$ candidates are labeled by the expensive LLM. The sample is stratified by cheap score: the candidates are cut into $K{=}4$ equal-count strata (equal scores never straddle a cut) and the labels are spread evenly over them.
 
-\subsection{Log-odds scoring and the ambiguity band}
-The cheap stage returns a probability $p_i \in (0,1)$; we work in log-odds space, $\ell_i = \log \frac{p_i}{1-p_i}$, additive under independent evidence combination and symmetric around the decision point $\ell_i=0$. We choose the band from a held-out calibration set $C$ ($|C|{=}20$ in our implementation) rather than a hand-picked $\epsilon$.
+\textbf{Beta-posterior bounds.} Let stratum $h$ have $N_h$ candidates, $n_h$ of them labeled, $y_h$ of those positive. With a uniform prior, Beta-Binomial conjugacy~\cite{gelman2013bayesian} gives the positive rate $\pi_h\sim\mathrm{Beta}(1{+}y_h,1{+}n_h{-}y_h)$. Labeled rows keep their answer, so only the $U_h=N_h-n_h$ unlabeled rows can be lost or wrongly accepted; their positives number $X_h\sim\mathrm{Bin}(U_h,\pi_h)$. Rejecting the $b$ lowest strata leaves a recall, relative to the expensive model, of
+\[ \rho_b = 1-\frac{\sum_{h\le b}X_h}{Y+\sum_h X_h}, \]
+with $Y=\sum_h y_h$, and accepting strata $h\ge t$ without verification has precision $\varpi_t=\sum_{h\ge t}X_h/\sum_{h\ge t}U_h$. We propagate the posteriors to both by Monte Carlo (2,000 draws) and take lower credible bounds at level $\alpha{=}0.9$: $\widehat r_\alpha(b)=Q_{1-\alpha}(\rho_b)$ and $\widehat p_\alpha(t)=Q_{1-\alpha}(\varpi_t)$, where $Q_q$ is the $q$-quantile. With one stratum and a uniform sample they reduce to the $\mathrm{Beta}(1{+}\mathit{TP},1{+}\mathit{FN})$ and $\mathrm{Beta}(1{+}\mathit{TP},1{+}\mathit{FP})$ bounds. The band rejects the largest prefix of strata and accepts the largest suffix that clear the target $Q^\ast$:
+\begin{align*}
+\tau_- &= \text{top score of stratum }\max\{b:\widehat r_\alpha(b)\ge Q^\ast\},\\
+\tau_+ &= \text{lowest score of stratum }\min\{t:\widehat p_\alpha(t)\ge Q^\ast\}.
+\end{align*}
+Anything not certified is escalated.
 
-\subsection{Beta-posterior credible bounds}
-\label{sec:beta-posterior}
-Fix $\tau$, let $A_\tau = \{r \in C: \ell(r)\ge\tau\}$, and let $\mathit{TP}(\tau),\mathit{FN}(\tau)$ be its true/false positive/negative counts against ground truth. Under a Binomial model with a uniform Beta$(1,1)$ prior, the posterior recall is $r\mid \mathit{TP},\mathit{FN} \sim \mathrm{Beta}(1{+}\mathit{TP}(\tau), 1{+}\mathit{FN}(\tau))$. For confidence level $\alpha$, the lower credible bound is
-\[
-  \widehat{r}_{\alpha}(\tau) = \texttt{betaincinv}\bigl(1{+}\mathit{TP}(\tau),\, 1{+}\mathit{FN}(\tau),\, 1-\alpha\bigr),
-\]
-the $(1{-}\alpha)$-quantile, \emph{not} the $\alpha$-quantile -- an off-by-quantile error we caught only via a unit test against a synthetic confusion matrix with a known closed-form bound, since the implementation's \texttt{alpha} denotes the confidence level itself. The precision bound is symmetric, using $\mathrm{Beta}(1{+}\mathit{TP}(\tau),1{+}\mathit{FP}(\tau))$. The band is $\tau_+=\min\{\tau:\widehat p_\alpha(\tau)\ge Q^\ast\}$, $\tau_-=\max\{\tau:\widehat r_\alpha(\tau)\ge Q^\ast\}$.
+\textbf{Target and power.} We use $Q^\ast{=}0.8$; $0.9$ cannot be certified from 20 labels, since a cheap stage correct on all 20 has a lower bound of only 0.896. In simulations (300 pools per configuration, 40 to 1,000 rows, 10--30\% positives, cheap-score AUC 0.76--0.96, $|C|\in\{20,40,100\}$; script in the artifact) the true recall reached $Q^\ast$ in at least 99\% of the trials with a certified reject region, against a target of 90\%. The price is modest power: with $|C|=20$ the cheap stage decides on its own 8--13\% of the rows (1\% with 10\% positives), 28--36\% with $|C|=40$, and 56\% of a 1,000-row pool needs $|C|=100$.
 
-\subsection{Operator ordering}
-For $k$ independent selection operators with per-call cost $c_i$ and selectivity $s_i$ evaluated in short-circuit order, expected cost is minimized by ascending $c_i/(1-s_i)$ -- cheap, likely-to-reject operators first~\cite{eleet}. This justifies placing the (free) structural filter before the batched cheap pass, and that before the batched expensive verification, in Trummer~V1's pipeline.
+\section{Experiments}
+\label{sec:eval}
 
-\section{Theoretical Cost Analysis}
-\label{sec:asymptotic-dominance}
+\subsection{Setup}
+\label{sec:setup}
+\textbf{Data and questions.} \textit{IMDb}: 25k movies (title, director, year, runtime, genres) and one review each. \textit{Amazon Fashion}: 186k products and 882k reviews (2018 McAuley Lab release), a cross-domain check. Each dataset has ten questions (\texttt{10q}), each evaluated on its own pool of 100 items. On \textit{IMDb} a pool holds the four row kinds of Example~\ref{ex:running}: 12 answers, 28 rows satisfying only $\sigma_S$, 30 only $\sigma_U$ and 30 neither, so 40 rows pass $\sigma_S$. On \textit{Amazon Fashion} 50 products pass $\sigma_S$, 15 of them answers; the ten questions are a held-out set, disjoint from the smaller suites used during development. \textit{IMDb} questions combine one or two structured conditions (genre, year, runtime) with one semantic condition on the reviews; the ten questions span seven genres and range from direct cues (\emph{funny}) to abstract, paraphrase-prone ones (\emph{chemistry}, \emph{approval of a twist}). \textit{Amazon Fashion} questions restrict the product type through its title and ask about a property described in the reviews. Ground truth is the conjunction of $\sigma_S$ and hand-authored regular-expression patterns encoding the semantic condition; no LLM judges. Labels are therefore deterministic, but a correct paraphrase outside the patterns counts as a negative, so absolute F1 values are best read as comparisons between methods.
 
-We now prove precisely when calibrated cascading is guaranteed to cost less than an all-expensive baseline over the same $n$-row candidate pool, and instantiate the result with our measured system constants.
+\textbf{Metrics, models, parameters.} Quality is precision, recall and F1 of the returned ids; cost is LLM calls (cheap and expensive), wall-clock time and dollars, from accelerator time at \$3/hour. We report the mean and standard deviation over the ten questions of the per-question mean of ten repetitions; as all calls are at temperature 0, repetitions differ only in the calibration sample. All methods use Gemma~4~e2b (cheap) and Gemma~4~26b (expensive), served by Ollama on one NVIDIA H200; the baselines use only the expensive model. \textsc{Suql} and \textsc{CasSuql} process one row per call; \textsc{CasTrummer} uses $B{=}8$ and $B'{=}32$, and \textsc{Trummer} the 4,096-token budget of its optimizer~\cite{trummer2025semanticjoin}. Both cascades use $|C|{=}20$, $K{=}4$, $\alpha{=}0.9$, $Q^\ast{=}0.8$. Cheap scores of \textsc{CasSuql} are read from Ollama's native log-probabilities (its OpenAI-compatible endpoint returns none). Reviews are truncated before entering a prompt: to 1,800 characters for the cheap stage of \textsc{CasSuql}, 3,500 for both stages of \textsc{CasTrummer}, 6,000 for the expensive stage of \textsc{CasSuql} and \textsc{Suql}, and 1,400 for \textsc{Trummer}; the same limits apply to \textit{Amazon Fashion}, whose reviews are much shorter (median 270 characters, against 1,115 on \textit{IMDb}). Code, suites, prompts and scripts: \url{https://github.com/AnnaRemi/SemanticCascadedLLMJoins}.
 
-\textbf{Setup.} Let rows be i.i.d.\ draws given the structured predicate. Vanilla costs $c_e$ calls / $\tau_e$ seconds per row. The cascade costs $c_c/B$ calls and $\tau_c/B$ seconds per row (batching factor $B$), escalates each row independently with calibrated probability $\pi$, and pays a one-time calibration cost $K_{\mathrm{calls}}, K_{\mathrm{time}}$. With $S_n\sim\mathrm{Binomial}(n,\pi)$ escalations,
-\[
-  \mathrm{Calls}_{\mathrm{casc}}(n) = K_{\mathrm{calls}} + n\tfrac{c_c}{B} + S_n c_e,
-\]
-\[
-  \mathrm{Time}_{\mathrm{casc}}(n) = K_{\mathrm{time}} + n\tfrac{\tau_c}{B} + S_n \tau_e.
-\]
-
-\begin{proposition}[Finite crossover]
-\label{prop:crossover}
-Let $\Delta_{\mathrm{calls}} = (1-\pi)c_e - c_c/B$. If $\Delta_{\mathrm{calls}}>0$, then $\mathbb E[\mathrm{Calls}_{\mathrm{casc}}(n)] < n c_e \iff n > n^\ast_{\mathrm{calls}} := K_{\mathrm{calls}}/\Delta_{\mathrm{calls}}$, and the gap grows unboundedly in $n$. If $\Delta_{\mathrm{calls}}\le 0$, no finite $n$ helps: the cascade is asymptotically worse. The symmetric statement holds for time with $\Delta_{\mathrm{time}}=(1-\pi)\tau_e-\tau_c/B$.
-\end{proposition}
-\begin{proof}
-By linearity, $\mathbb E[\mathrm{Calls}_{\mathrm{casc}}(n)]=K_{\mathrm{calls}}+n(c_c/B+\pi c_e)$; $K_{\mathrm{calls}}+n(c_c/B+\pi c_e) < nc_e \iff n\Delta_{\mathrm{calls}} > K_{\mathrm{calls}}$.
-\end{proof}
-
-\begin{proposition}[Exponentially vanishing failure probability]
-\label{prop:hoeffding}
-For $n>n^\ast_{\mathrm{calls}}$, let $t_n=(n\Delta_{\mathrm{calls}}-K_{\mathrm{calls}})/c_e>0$. Then
-$\Pr[\mathrm{Calls}_{\mathrm{casc}}(n)\ge nc_e] \le \exp(-2t_n^2/n)$, which is $O(e^{-cn})$ for a constant $c=2\Delta_{\mathrm{calls}}^2/c_e^2$.
-\end{proposition}
-\begin{proof}
-The event equals $\{S_n \ge n\pi+t_n\}$; $S_n$ is a sum of $n$ i.i.d.\ bounded variables with mean $n\pi$, so Hoeffding's inequality gives the bound; $t_n$ is linear in $n$, so the exponent is $\Theta(n)$.
-\end{proof}
-
-Together, Propositions~\ref{prop:crossover}--\ref{prop:hoeffding} give the precise sense in which ``enough rows'' make cascading win: a finite, computable crossover in expectation, and an exponentially shrinking failure probability for any single realized run beyond it.
-
-\begin{table}[t]
+\begin{table*}[t]
 \centering\scriptsize
-\begin{tabular}{lrr}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{l rrrrr rrrrr}
 \toprule
-Quantity & SUQL~V1 & Trummer~V1 \\
+ & \multicolumn{5}{c}{\textit{IMDb} \texttt{10q}} & \multicolumn{5}{c}{\textit{Amazon Fashion} \texttt{10q}} \\
+\cmidrule(lr){2-6}\cmidrule(lr){7-11}
+Metric & \textsc{Suql} & \textsc{CasSuql} & \textsc{Trummer} & \textsc{CasTrummer} & \textit{CasT$^{-}$} & \textsc{Suql} & \textsc{CasSuql} & \textsc{Trummer} & \textsc{CasTrummer} & \textit{CasT$^{-}$} \\
 \midrule
-Batching factor $B$ & $1$ & $8$ \\
-Escalation rate $\pi$ & $0.751$ & $0.125$ \\
-Cheap cost/row $\tau_c/B$ (s) & $20.86$ & $0.527$ \\
-Expensive cost/call $\tau_e$ (s) & $2.97$ & $2.80$ \\
-$K_{\mathrm{calls}}$ (calibration) & $20$ & $1$ \\
-$\Delta_{\mathrm{calls}}=(1-\pi)-1/B$ & $-0.751$ & $+0.750$ \\
-$\Delta_{\mathrm{time}}$ (s) & $-20.12$ & $+1.919$ \\
-$n^\ast_{\mathrm{calls}}$ & none & $\approx 1.3$ \\
+Precision & 0.818 (0.213) & \textbf{0.830 (0.196)} & 0.620 (0.313) & 0.779 (0.186) & \textit{0.788 (0.230)} & 0.820 (0.115) & \textbf{0.839 (0.113)} & 0.565 (0.200) & 0.755 (0.285) & \textit{0.673 (0.252)} \\
+Recall & 0.400 (0.207) & 0.400 (0.203) & 0.275 (0.193) & \textbf{0.708 (0.189)} & \textit{0.725 (0.208)} & \textbf{0.807 (0.254)} & \textbf{0.807 (0.234)} & 0.473 (0.260) & 0.647 (0.325) & \textit{0.633 (0.360)} \\
+F1 & 0.501 (0.168) & 0.500 (0.153) & 0.340 (0.182) & \textbf{0.713 (0.131)} & \textit{0.723 (0.165)} & 0.779 (0.142) & \textbf{0.796 (0.133)} & 0.464 (0.187) & 0.673 (0.294) & \textit{0.621 (0.303)} \\
+Wall time (s) & \textbf{24.7 (0.9)} & 47.0 (2.4) & 25.4 (2.6) & 25.7 (2.6) & \textit{22.3 (2.2)} & 29.0 (2.1) & 53.1 (2.9) & 24.0 (5.4) & \textbf{23.2 (8.4)} & \textit{21.4 (9.1)} \\
+LLM calls & 40.0 (0.0) & 78.0 (2.8) & 10.5 (1.3) & \textbf{7.6 (0.7)} & \textit{9.0 (0.0)} & 49.4 (0.5) & 92.0 (3.7) & 9.0 (2.4) & \textbf{8.2 (3.0)} & \textit{9.0 (3.4)} \\
+Cost (\$) & \textbf{0.0206 (0.0008)} & 0.0391 (0.0020) & 0.0212 (0.0022) & 0.0214 (0.0022) & \textit{0.0186 (0.0018)} & 0.0242 (0.0017) & 0.0442 (0.0024) & 0.0200 (0.0045) & \textbf{0.0193 (0.0070)} & \textit{0.0178 (0.0076)} \\
 \bottomrule
 \end{tabular}
-\caption{Measured constants (\S\ref{sec:eval}) in Prop.~\ref{prop:crossover}, using a ``lean vanilla'' reference ($c_e{=}1$ call/row) to isolate the cascade mechanism from baseline-specific overhead (e.g.\ SUQL baseline's \texttt{summary()} calls).}
-\label{tab:theory-constants}
-\end{table}
+\caption{Quality and cost per question, mean (std.\ dev.) over the 10 questions, 10 repetitions each. Bold: best of the four methods. \textit{CasT$^{-}$}: \textsc{CasTrummer} without the cheap stage ($|C|{=}0$, so it decides no row; ablation).}
+\label{tab:results}
+\end{table*}
 
-Table~\ref{tab:theory-constants} shows both margins are \emph{negative} for SUQL~V1: with no batching ($B{=}1$) and a $75\%$ escalation rate, its cheap stage cannot beat a lean, single-call-per-row vanilla on calls, and its measured per-row latency ($20.86$s) already exceeds the expensive stage's own per-call latency ($2.97$s), so no finite pool size rescues it on time -- exactly matching the observed $8\times$ wall-time regression (\S\ref{sec:results}). Trummer~V1's margins are comfortably positive: batching ($B{=}8$) drives its effective per-row cheap cost to $0.527$s, an order of magnitude below the expensive per-call cost, and its low escalation rate ($12.5\%$) plus a tiny, already-batched calibration cost give a call-count crossover of $n^\ast\approx 1.3$ rows -- the cascade is predicted to win almost immediately, matching what we observe even at the modest $n{=}40$ used here. \textbf{Batching the cheap stage is therefore not an implementation detail: it determines whether the margin condition can hold at all}, and is accordingly the most consequential remaining change for SUQL~V1 (\S\ref{sec:future}).
+\begin{table*}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l rrrr rrrr}
+\toprule
+ & \multicolumn{4}{c}{\textit{IMDb} \texttt{10q}} & \multicolumn{4}{c}{\textit{Amazon Fashion} \texttt{10q}} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+F1 & \textsc{Suql} & \textsc{CasSuql} & \textsc{Trummer} & \textsc{CasTrummer} & \textsc{Suql} & \textsc{CasSuql} & \textsc{Trummer} & \textsc{CasTrummer} \\
+\midrule
+q1 & 0.59 & 0.50 & 0.15 & \textbf{0.82} & 0.57 & \textbf{0.64} & 0.21 & 0.32 \\
+q2 & \textbf{0.71} & \textbf{0.71} & 0.55 & 0.62 & 0.85 & \textbf{0.93} & 0.43 & \textbf{0.93} \\
+q3 & 0.29 & 0.29 & 0.13 & \textbf{0.83} & 0.61 & 0.61 & 0.43 & \textbf{0.67} \\
+q4 & 0.47 & 0.47 & 0.57 & \textbf{0.92} & \textbf{0.94} & \textbf{0.94} & 0.79 & 0.90 \\
+q5 & \textbf{0.80} & \textbf{0.80} & 0.22 & 0.74 & 0.61 & \textbf{0.67} & 0.32 & \textbf{0.67} \\
+q6 & 0.45 & 0.45 & 0.15 & \textbf{0.55} & \textbf{0.91} & \textbf{0.91} & 0.61 & 0.80 \\
+q7 & \textbf{0.59} & 0.50 & 0.38 & 0.56 & 0.73 & 0.77 & 0.51 & \textbf{0.78} \\
+q8 & 0.40 & 0.40 & 0.25 & \textbf{0.83} & \textbf{0.85} & \textbf{0.85} & 0.57 & \textbf{0.85} \\
+q9 & 0.38 & 0.38 & 0.59 & \textbf{0.63} & \textbf{0.79} & 0.71 & 0.19 & 0.00 \\
+q10 & 0.33 & 0.50 & 0.40 & \textbf{0.64} & \textbf{0.94} & \textbf{0.94} & 0.58 & 0.83 \\
+\bottomrule
+\end{tabular}
+\caption{F1 per question (mean of 10 repetitions); bold: best of the four methods on that question.}
+\label{tab:perq}
+\end{table*}
 
-\section{Experimental Setup}
-\label{sec:eval}
-\textbf{Dataset.} Ten held-out, genre-diverse questions (\texttt{10q} suite), each with its own controlled, auditable $100$-movie pool drawn from a $\sim$25{,}000-row canonical IMDb corpus: $12$ true positives, $28$ structured-semantic negatives, $30$ semantic-only distractors, $30$ double negatives; $40$ rows satisfy the structured predicate in every question.
-\textbf{Models.} Ollama-served open-weight models (cheap: Gemma~4 \texttt{e2b}; expensive: Gemma~4 \texttt{26b}) behind a LiteLLM abstraction layer.
-\textbf{Repetitions.} Each of the four methods is run $10\times$ per question; we report means over all $10{\times}10$ runs (\texttt{aggregate.csv}) and per-question means (\texttt{comparison.csv}).
-\textbf{Metrics.} Precision, recall, F1 against an annotation-derived gold set; wall-clock time; LLM calls (with cheap/expensive split for cascades).
-
-\section{Results}
+\subsection{Results}
 \label{sec:results}
 
-\begin{table}[t]
-\caption{Cost per question, averaged over 10 questions $\times$ 10 reps.}
-\label{tab:cost}
-\centering\footnotesize
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{lrrrr}
-\toprule
-Metric & SUQL base. & SUQL V1 & Trummer base. & \textbf{Trummer V1} \\
-\midrule
-Wall time (s) & 115.57 & 923.60 & 71.28 & \textbf{35.05} \\
-LLM calls     & 117.08 & 70.05 & 96.87 & \textbf{10.00} \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-\begin{table}[t]
-\caption{Quality per question (best variant per row in bold).}
-\label{tab:quality}
-\centering\footnotesize
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{lrrrr}
-\toprule
-Metric & SUQL base. & SUQL V1 & Trummer base. & \textbf{Trummer V1} \\
-\midrule
-Precision & 0.683 & 0.709 & 0.655 & \textbf{0.810} \\
-Recall    & 0.758 & \textbf{0.808} & 0.408 & 0.750 \\
-F1        & 0.678 & 0.696 & 0.444 & \textbf{0.757} \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-Cascading the row-wise strategy (SUQL~V1) trades time for a modest quality gain: $7.99\times$ slower wall time (ambiguous rows now pay for both stages, and Table~\ref{tab:theory-constants} shows why this is structural, not incidental) for $+2.7\%$ F1 and $+6.6\%$ recall. The join baseline is far cheaper than both SUQL variants but at a real quality cost (F1 $0.444$, worst of the four, driven by recall $0.408$). Cascading the join strategy (Trummer~V1) improves \emph{both} axes over its own baseline ($2.03\times$ faster, $10\times$ fewer calls, $+70\%$ F1) and, relative to SUQL~V1, is $26.3\times$ faster and uses $1/7$ the calls while still gaining $+8.8\%$ F1 and $+14.2\%$ precision, at a $\approx 7\%$ relative recall cost.
-
-\textbf{Robustness across questions.} Per-question F1 ranges from $0.267$--$0.917$ (SUQL baseline), $0.286$--$0.957$ (SUQL~V1), $0.154$--$0.667$ (Trummer baseline), and $0.500$--$0.917$ (Trummer~V1). Trummer~V1's \emph{floor} is the highest of the four -- it is the only method that does not collapse on the hardest question in the suite (romance-chemistry, Q3: SUQL baseline $0.267$, Trummer baseline $0.154$, SUQL~V1 $0.286$, Trummer~V1 $0.917$), consistent with the batched escalation step repairing exactly the paraphrase-heavy, vocabulary-mismatched cases both baselines struggle with.
-
-\clearpage
-\begin{figure}[tb]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figs/imdb10q/01_quality.png}
-\caption{IMDb \texttt{10q}: precision, recall, F1 by method.}
-\label{fig:imdb-quality}
+\includegraphics[width=\columnwidth]{figs/pareto/cost_f1_pareto_both_datasets.png}
+\caption{Cost--F1 trade-off on \textit{IMDb} (circles) and \textit{Amazon Fashion} (triangles).}
+\label{fig:pareto}
 \end{figure}
 
-Figure~\ref{fig:imdb-quality}: SUQL~V1 has the tallest recall bar ($0.808$); Trummer baseline is weakest throughout, recall collapsing to $0.408$ against comparable precision ($0.655$) -- the incomplete-coverage failure mode of \S\ref{sec:trummer-baseline}. Trummer~V1's F1 (purple) is tallest of the four.
+\textbf{Quality.} \textsc{CasTrummer} raises the F1 of \textsc{Trummer} from 0.340 to 0.713 on \textit{IMDb} (+110\%, recall 0.275 to 0.708) and from 0.464 to 0.673 on \textit{Amazon Fashion} (+45\%, mostly through precision, 0.565 to 0.755). The paired gain over the ten questions is $+0.373\pm0.076$ (better on all ten) and $+0.209\pm0.057$ (better on nine), and \textsc{CasTrummer} is the best (or tied best) of the four methods on seven (\textit{IMDb}) and five (\textit{Amazon Fashion}) questions (Table~\ref{tab:perq}). \textsc{CasSuql} reproduces the quality of \textsc{Suql} (F1 0.500 against 0.501, paired difference $-0.001\pm0.022$; 0.796 against 0.779, $+0.017\pm0.015$) with exactly the same recall (0.400; 0.807), and is never more than 0.05 F1 below \textsc{Suql} on eight (\textit{IMDb}) and nine (\textit{Amazon Fashion}) questions.
 
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/imdb10q/02_time.png}
-\caption{IMDb \texttt{10q}: mean wall time, cheap vs.\ expensive stage.}
-\label{fig:imdb-time}
-\end{figure}
+\textbf{Calls and cost.} \textsc{CasTrummer} issues 81.1\% (\textit{IMDb}) and 83.3\% (\textit{Amazon Fashion}) fewer LLM calls than \textsc{Suql} and 28.0\% and 8.4\% fewer than \textsc{Trummer}. Its wall-clock time equals that of \textsc{Suql} on \textit{IMDb} ($+3.7\%$) and is 20.1\% lower on \textit{Amazon Fashion}, where it is also the cheapest method in dollars ($-20\%$ against \textsc{Suql}). \textsc{CasSuql} sends 5.0\% and 13.8\% fewer rows to the expensive model than \textsc{Suql}. In Figure~\ref{fig:pareto}, \textsc{CasTrummer} and \textsc{Suql} form the Pareto front on both datasets: \textsc{CasTrummer} reaches F1 0.713 against 0.501 on \textit{IMDb} at a cost 4\% higher, and is the cheapest on \textit{Amazon Fashion}, where \textsc{Suql} keeps the higher F1 (0.779 against 0.673).
 
-Figure~\ref{fig:imdb-time} is the clearest single visual of Table~\ref{tab:theory-constants}'s mechanism: SUQL~V1's bar is tallest ($923.6$s) and \emph{dominated by its own cheap stage} (green, $77\%$) -- the cheap probe is not actually cheap in wall time. Trummer~V1's bar is shortest ($35.1$s).
+\textbf{The calibration does what it certifies.} \textsc{CasSuql} certified a reject region in 34\% (\textit{IMDb}) and 77\% (\textit{Amazon Fashion}) of its repetitions, and recall did not drop in any dataset; when the sample cannot certify a band the cascade falls back to the expensive model instead of guessing. \textsc{CasSuql} collapsed on no question (no F1 of 0 where \textsc{Suql} exceeded 0.3), and no row was judged twice.
 
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/imdb10q/03_calls.png}
-\caption{IMDb \texttt{10q}: mean LLM calls, cheap vs.\ expensive stage.}
-\label{fig:imdb-calls}
-\end{figure}
-
-Figure~\ref{fig:imdb-calls}: SUQL~V1's calls ($70.0$) are \emph{lower} than baseline's ($117.1$), unlike the time comparison above -- SUQL~V1 trades calls for time, not both. Trummer~V1 needs only $10.0$ calls, split evenly cheap/expensive.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.55\textwidth]{figs/imdb10q/04_best_solution.png}
-\caption{IMDb \texttt{10q}: recall vs.\ wall time; harness best-solution annotation is Trummer~V1.}
-\label{fig:imdb-best}
-\end{figure*}
-
-Figure~\ref{fig:imdb-best} plots recall against time for all four methods at once: Trummer~V1 (outlined) sits bottom-left (low time, competitive recall), while SUQL~V1 sits far right ($923.6$s) at similar recall to SUQL baseline -- isolating SUQL~V1's time regression from its recall profile.
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/imdb10q/05_cost_by_approach.png}
-\caption{IMDb \texttt{10q}: estimated \$-cost per question.}
-\label{fig:imdb-cost}
-\end{figure}
-
-Figure~\ref{fig:imdb-cost}: at \$3/accelerator-hour, SUQL~V1 costs \$0.770/question -- $26\times$ Trummer~V1's \$0.029. Per-call figures show the cheap stage costing \emph{more} per call than expensive for both cascades ($7.0\times$ SUQL~V1, $1.5\times$ Trummer~V1) -- exactly the time ratios of Table~\ref{tab:theory-constants}, since \$-cost here is simply time $\times$ a flat rate.
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/imdb10q/06_cost_vs_f1.png}
-\caption{IMDb \texttt{10q}: cost--F1 Pareto frontier.}
-\label{fig:imdb-pareto}
-\end{figure}
-
-Figure~\ref{fig:imdb-pareto} shows \textbf{Trummer~V1 as the unique non-dominated point}: lowest cost \emph{and} highest F1 simultaneously, so it alone strictly dominates all three other methods (unlike the Amazon results below, where two points share the frontier) -- and resolves, rather than merely flags, the cross-model \$-cost puzzle noted below.
-
-\section{Discussion}
-\label{sec:discussion}
-
-\textbf{Selectivity still dominates.} Every question in this suite fixes structural selectivity at $40\%$ ($40$ of $100$ rows); the ranking we report is most informative at that selectivity and should be re-measured across a selectivity sweep before being treated as universal.
-
-\textbf{The \texttt{answer()} yield rate as a diagnostic.} The fraction of structurally-filtered rows accepted by the semantic operator remains a label-free predicate-quality signal: very high yield indicates an under-specified predicate; very low yield suggests over-constraint or vocabulary mismatch.
-
-\textbf{\texttt{LIMIT} without early termination.} None of the four implementations currently stop evaluating early once a \texttt{LIMIT k} target is met, despite Algorithm~\ref{alg:cascade} supporting it in principle.
-
-\textbf{Threats to validity.} All ten questions share the same $100/40/12$ structural shape by design; this isolates semantic-task difficulty as the varying factor but leaves a selectivity sweep (the repository's \texttt{1q}/\texttt{3q}/\texttt{5q} suites, and a still-larger suite) as the natural next step.
-
-\section{Cross-Domain Validation: Amazon Data}
-\label{sec:amazon}
-
-Three Amazon experiments test whether findings above are IMDb-specific: (1) a wide pool-size sweep ($n{=}100$--$300$, Gemma, one question) stress-testing Proposition~\ref{prop:crossover} directly; (2) a full ten-question \emph{Amazon Fashion} suite, same Gemma pair, same \texttt{10q} format as IMDb; (3) a five-question Amazon suite under Qwen.
-
-\textbf{IMDb vs.\ Amazon Fashion (matched suite, same model).} Table~\ref{tab:imdb-vs-amazon} compares the two \texttt{10q} suites directly -- a materially better comparison than a single pool-size point used in an earlier revision of this paper, which it corrects: with the full ten-question average, \textbf{Trummer~V1's F1 gain over SUQL baseline does not replicate on Amazon Fashion} (a small $-4.3\%$, not a gain). SUQL baseline itself is far cheaper on Amazon Fashion ($49.2$ vs.\ $117.1$ calls), leaving less headroom for the cascade; more importantly, \textbf{SUQL~V1 is strictly dominated by its own baseline here} -- worse on calls ($+59\%$), time ($+148\%$), \emph{and} F1 ($-7.1\%$) at once, unlike IMDb where it at least traded time for quality.
+\textbf{Where the gain comes from, and what the cheap stage costs.} The cheap stage decided on its own only 2.0 of 40 rows (\textit{IMDb}) and 7.4 of 50 (\textit{Amazon Fashion}) for \textsc{CasSuql}, and 1.4 and 0.9 for \textsc{CasTrummer}. Column \textit{CasT$^{-}$} of Table~\ref{tab:results} runs \textsc{CasTrummer} with $|C|{=}0$, so that every row passing $\sigma_S$ is verified by the expensive model in batches. On \textit{IMDb} it is as accurate (F1 0.723 against 0.713; paired difference $-0.010\pm0.035$) and 3.4\,s faster; on \textit{Amazon Fashion} \textsc{CasTrummer} is better by $0.052\pm0.026$ at equal recall, which we cannot separate from an effect of batch partitioning. The quality gain over \textsc{Trummer} (+0.38 and +0.16 without the cheap stage) therefore comes from the other parts of the \textsc{CasTrummer} architecture, structural filtering and batched expensive verification with retry; the calibrated cheap stage adds a recall guarantee without a measurable quality cost, at 1.8--3.4\,s of extra wall-clock time. For \textsc{CasSuql} the cost model of \S\ref{sec:cost} explains the time: a cheap call took 0.58\,s against 0.62\,s for an expensive one on \textit{IMDb} (0.55 against 0.59\,s on \textit{Amazon Fashion}), so $t_c/t_e\approx0.94$ while $d\le0.15$, and \textsc{CasSuql} takes 1.8 to 1.9 times the time of \textsc{Suql}. Stand-alone measurements of other pairs (Table~\ref{tab:pairs}) show wider gaps, down to $t_c/t_e=0.30$ for Llama~3.1 8B and 70B, with cheap scores of comparable quality (AUC 0.81--0.85); there a row-wise cascade would need to decide only about a third of the rows to save time, which our simulations suggest a calibration set of about 40 rows can reach (\S\ref{sec:cascade-math}). We have not yet evaluated these pairs.
 
 \begin{table}[t]
 \centering\footnotesize
-\begin{tabular}{lrr}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
 \toprule
- & IMDb \texttt{10q} & Amazon Fashion \texttt{10q} \\
+Cheap $\to$ expensive & AUC & $t_c$ (s) & $t_e$ (s) & $t_c/t_e$ \\
 \midrule
-\multicolumn{3}{l}{\emph{Trummer~V1 vs.\ SUQL baseline}} \\
-$\Delta$F1    & $+11.7\%$ & $-4.3\%$ \\
-$\Delta$calls & $-91.5\%$ & $-73.6\%$ \\
-$\Delta$time  & $-69.7\%$ & $-39.8\%$ \\
-\midrule
-\multicolumn{3}{l}{\emph{SUQL~V1 vs.\ SUQL baseline}} \\
-$\Delta$F1    & $+2.7\%$  & $-7.1\%$ \\
-$\Delta$calls & $-40.2\%$ & $+59.1\%$ \\
-$\Delta$time  & $+699\%$  & $+148\%$ \\
+Gemma 4 e2b $\to$ 26b (used here) & 0.85 & 0.42 & 0.65 & 0.65 \\
+Gemma 4 e2b $\to$ 31b & 0.85 & 0.42 & 0.79 & 0.54 \\
+Qwen 3.5 2b $\to$ 27b & 0.83 & 0.36 & 1.00 & 0.36 \\
+Llama 3.1 8b $\to$ 70b & 0.81 & 0.23 & 0.78 & 0.30 \\
 \bottomrule
 \end{tabular}
-\caption{Same model, same suite design, different domain.}
-\label{tab:imdb-vs-amazon}
+\caption{Stand-alone latency of candidate model pairs on \textit{IMDb} rows (single stream, H200): $t_c$ is a one-token scoring call of the cheap model, $t_e$ an answer call of the expensive one; AUC is that of the cheap model's log-odds against the ground truth (120 rows). Only the first pair is evaluated in this paper.}
+\label{tab:pairs}
 \end{table}
 
-\clearpage
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon_fashion_gemma/01_quality.png}
-\caption{Amazon Fashion \texttt{10q}, Gemma: precision, recall, F1.}
-\label{fig:amzf-quality}
-\end{figure}
+\textbf{Which cascade to use.} \textsc{CasTrummer} is the choice when calls and dollars matter: it improves the F1 of \textsc{Trummer} on nine or ten of the ten questions and issues about 80\% fewer calls than \textsc{Suql}, although on \textit{Amazon Fashion} \textsc{Suql} remains the more accurate. \textsc{CasSuql} is the choice when the quality of row-wise judgments must be preserved with a certified bound on what the cheap stage rejects; it pays a time overhead until the cheap model is much faster than the expensive one.
 
-Figure~\ref{fig:amzf-quality}: three of four F1 bars sit in a much narrower band ($0.776$--$0.835$) than on IMDb. The exception is Trummer baseline, whose precision collapses to $0.330$ despite the \emph{highest} recall seen so far ($0.967$) -- the opposite imbalance from its IMDb profile.
+\textbf{Scope.} We use one model pair, ten questions per dataset, pools of 40 and 50 candidates (so 20 calibration rows are 40--50\% of a pool), and lexical ground truth. On one \textit{Amazon Fashion} question the F1 of \textsc{CasTrummer} is 0, which drives its large deviation.
 
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon_fashion_gemma/02_time.png}
-\caption{Amazon Fashion \texttt{10q}, Gemma: mean wall time, cheap vs.\ expensive stage.}
-\label{fig:amzf-time}
-\end{figure}
+\section{Conclusion}
+\label{sec:conclusion}
 
-Figure~\ref{fig:amzf-time} repeats IMDb's pattern (Figure~\ref{fig:imdb-time}): SUQL~V1 tallest ($48.7$s, $77\%$ cheap-stage), Trummer~V1 shortest ($11.8$s). SUQL baseline itself is much cheaper here ($19.6$s vs.\ $115.6$s), so the \emph{relative} speedup is weaker.
+\textsc{CasSuql} and \textsc{CasTrummer} run the structured filter in the DBMS and put a cheap stage with a statistically calibrated band in front of the semantic operators of \textsc{Suql} and \textsc{Trummer}. The calibration is valid and conservative, wastes no label, and lets the cascades keep the recall of the expensive model; \textsc{CasTrummer} improves the F1 of \textsc{Trummer} by 45--110\% and issues 81--83\% fewer calls than \textsc{Suql}. The cheap stage saves time only when it is much faster than the expensive one and certified on many rows ($t_c/t_e<d$). Future work targets exactly that regime: model pairs with a larger latency gap, calibration sets that grow with the pool (about 10\% to decide half of it), larger pools, and more than two stages.
 
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon_fashion_gemma/03_calls.png}
-\caption{Amazon Fashion \texttt{10q}, Gemma: mean LLM calls, cheap vs.\ expensive stage.}
-\label{fig:amzf-calls}
-\end{figure}
-
-Figure~\ref{fig:amzf-calls}: SUQL~V1's bar ($78.3$ calls) is \emph{taller} than baseline's ($49.2$) -- the reverse of IMDb (Figure~\ref{fig:imdb-calls}), where SUQL~V1 used fewer calls. Trummer~V1 again needs the fewest ($13.0$).
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.55\textwidth]{figs/amazon_fashion_gemma/04_best_solution.png}
-\caption{Amazon Fashion \texttt{10q}, Gemma: recall vs.\ wall time; best-solution annotation is Trummer~V1.}
-\label{fig:amzf-best}
-\end{figure*}
-
-Figure~\ref{fig:amzf-best}: SUQL~V1 sits far right on time while its recall bubble is no higher than baseline's or Trummer~V1's -- it buys no recall advantage for its much larger time cost here, unlike IMDb.
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon_fashion_gemma/05_cost_by_approach.png}
-\caption{Amazon Fashion \texttt{10q}, Gemma: estimated \$-cost per question.}
-\label{fig:amzf-cost}
-\end{figure}
-
-Figure~\ref{fig:amzf-cost}: SUQL~V1 is the most expensive method (\$0.0406) despite Trummer baseline having no cheap stage at all (\$0.0306) -- SUQL~V1's extra calls and pricier cheap stage compound. Trummer~V1 remains cheapest (\$0.0098).
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon_fashion_gemma/06_cost_vs_f1.png}
-\caption{Amazon Fashion \texttt{10q}, Gemma: cost--F1 Pareto frontier.}
-\label{fig:amzf-pareto}
-\end{figure}
-
-Figure~\ref{fig:amzf-pareto} shows \emph{two} non-dominated points -- Trummer~V1 and SUQL baseline -- rather than IMDb's single dominant point: SUQL baseline has slightly higher F1 ($0.835$ vs.\ $0.799$) at slightly higher cost ($\$0.0164$ vs.\ $\$0.0098$), so neither dominates the other.
-
-\textbf{Scaling and reliability validation.} Computing $\Pr[\text{cascade cost}\ge\text{vanilla cost}]$ via full pairwise comparison across the $n{=}100$--$300$ sweep: on calls, the cascade lost \emph{zero} times at every $n$, in both the standard and adversarial ($K{\propto}n$) calibration regime. On time, one small ($0.66\%$) failure appears at $n{=}100$, vanishing by $n{=}125$ -- system-timing jitter, not the escalation-count randomness Proposition~\ref{prop:hoeffding} formalizes (\texttt{expensive\_calls} had zero within-$n$ variance here, so this confirms Prop.~\ref{prop:crossover}'s conclusion without exercising Prop.~\ref{prop:hoeffding}'s specific mechanism). Quality is less clean: Trummer~V1 loses F1 to vanilla at $2$--$4$ of $6$ pool sizes across the two regimes, tracking a \texttt{calibration\_agreement} that misses its $0.9$ target everywhere tested ($0.27$--$0.89$) -- reinforcing the case for porting SUQL~V1's Beta-posterior bound to Trummer~V1.
-
-\clearpage
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon/01_cost_vs_n.png}
-\caption{\$-cost vs.\ pool size $n$ (log scale), all four methods.}
-\label{fig:amzscale-cost}
-\end{figure}
-
-Figure~\ref{fig:amzscale-cost}: the near-flat-then-rising shape is the expected signature of a cost linear in $n$ viewed against $\log n$ (Prop.~\ref{prop:crossover}), not super-linear growth. Annotated thresholds mark where Trummer~V1 becomes cheaper ($n{=}25$) and cheaper \emph{and} within $85\%$ of baseline F1 ($n{=}100$).
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon/02_calls_vs_n.png}
-\caption{Mean LLM calls vs.\ pool size $n$ (log scale).}
-\label{fig:amzscale-calls}
-\end{figure}
-
-Figure~\ref{fig:amzscale-calls}: Trummer~V1 (purple) is lowest at every $n$; Trummer baseline (green) is visibly noisiest, consistent with its adaptive block-pairing retrying on parse failure (\S\ref{sec:trummer-baseline}).
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon/03_time_vs_n.png}
-\caption{Mean wall time (s) vs.\ pool size $n$ (log scale).}
-\label{fig:amzscale-time}
-\end{figure}
-
-Figure~\ref{fig:amzscale-time}: SUQL~V1 (orange) crosses above even noisy Trummer baseline by $n{\approx}150$ and finishes slowest at $n{=}300$ -- the same story as IMDb, now shown continuously across pool sizes.
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/amazon/04_f1_vs_n.png}
-\caption{F1 vs.\ pool size $n$ (log scale).}
-\label{fig:amzscale-f1}
-\end{figure}
-
-Figure~\ref{fig:amzscale-f1} is the least monotonic: Trummer~V1 (purple) starts at F1${}=0$ at the smallest pool before climbing above every other method by $n{\gtrsim}150$ -- $\pi$ is not perfectly stable across differently-sized pools, and at the smallest $n$ the calibration set is too small relative to $n$ for the threshold search to produce a usable band.
-
-\textbf{Qwen vs.\ Gemma.} A Qwen pair on the same Amazon workload (five-question suite) compares against the Amazon Fashion \texttt{10q} Gemma run above -- better-matched than the pool-size point used previously (which showed a small \emph{positive} Gemma F1 delta; the properly-averaged comparison shows a small \emph{negative} one, consistent with Qwen -- a correction, not silently revised). Both families agree in direction on every metric: Trummer~V1 trades a small, consistent F1 loss ($1.5$--$4.3\%$) for a large, consistent call reduction ($74$--$81\%$); SUQL~V1 is strictly dominated by its own baseline under \emph{both} models. This is the clearest cross-model evidence that the cost mechanism is architectural and portable, while SUQL~V1's unbatched design is the outlier. The earlier-noted near-identical SUQL~V1 \$-costs across the two runs (cheap $\$0.00062$ both; expensive $\$0.00036$ vs.\ $\$0.00033$) is now resolved rather than merely flagged: as confirmed above, \$-cost here is simply recorded time $\times$ a flat rate with no per-model pricing, so similar \$-costs reflect similar per-call \emph{latency}, not a shared underlying model.
-
-\clearpage
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/qwen_amazon/01_quality.png}
-\caption{Qwen, Amazon 5-question suite: precision, recall, F1 (error bars: std.\ dev.).}
-\label{fig:qwen-quality}
-\end{figure}
-
-Figure~\ref{fig:qwen-quality}: Trummer baseline shows the same precision/recall imbalance under Qwen as under Gemma ($0.360$ precision, $0.907$ recall). The other three methods cluster tightly ($0.863$--$0.878$ F1) with overlapping error bars.
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/qwen_amazon/02_time.png}
-\caption{Qwen, Amazon 5-question suite: mean wall time, cheap vs.\ expensive stage.}
-\label{fig:qwen-time}
-\end{figure}
-
-Figure~\ref{fig:qwen-time}: SUQL~V1 tallest ($48.3$s, $77\%$ cheap-stage), Trummer~V1 shortest ($17.4$s) -- the same ranking as both Gemma runs, now under a different model family.
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/qwen_amazon/03_calls.png}
-\caption{Qwen, Amazon 5-question suite: mean LLM calls, cheap vs.\ expensive stage.}
-\label{fig:qwen-calls}
-\end{figure}
-
-Figure~\ref{fig:qwen-calls}: SUQL~V1 uses \emph{more} calls than baseline ($75.0$ vs.\ $48.6$), matching its Amazon-Fashion behavior under Gemma rather than its IMDb behavior.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.55\textwidth]{figs/qwen_amazon/04_best_solution.png}
-\caption{Qwen, Amazon 5-question suite: recall vs.\ wall time; best-solution annotation is Trummer~V1.}
-\label{fig:qwen-best}
-\end{figure*}
-
-Figure~\ref{fig:qwen-best}: SUQL baseline, Trummer baseline, and Trummer~V1 sit at broadly similar recall; SUQL~V1 alone is pulled far right on time -- the same isolated-outlier pattern as both Gemma figures.
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/qwen_amazon/05_cost_by_approach.png}
-\caption{Qwen, Amazon 5-question suite: estimated \$-cost per question.}
-\label{fig:qwen-cost}
-\end{figure}
-
-Figure~\ref{fig:qwen-cost}: SUQL~V1 is most expensive (\$0.0403), Trummer~V1 cheapest (\$0.0145). SUQL~V1's cheap-call cost here (\$0.00062) matches its Gemma/Amazon-Fashion counterpart to five significant figures -- the basis of the \$-cost puzzle resolved above.
-
-\begin{figure}[tb]
-\centering
-\includegraphics[width=\columnwidth]{figs/qwen_amazon/06_cost_vs_f1.png}
-\caption{Qwen, Amazon 5-question suite: cost--F1 Pareto frontier.}
-\label{fig:qwen-pareto}
-\end{figure}
-
-Figure~\ref{fig:qwen-pareto} shows the same two-point frontier shape as Gemma/Amazon-Fashion: Trummer~V1 (\$0.0145, F1 $0.865$) and SUQL baseline (\$0.0175, F1 $0.878$) both non-dominated; SUQL~V1 and Trummer baseline each dominated on both axes.
-
-\emph{Remaining scope}: neither run records model parameter counts, so $P_c/P_e$ cannot yet be stated for Qwen the way Table~\ref{tab:theory-constants} does for Gemma; both families now cover all four methods on Amazon data, closing the earlier coverage gap.
-
-\section{Conclusion and Future Work}
-\label{sec:future}
-Across ten held-out, genre-diverse questions, a calibrated two-level cascade applied to a structurally-filtered, batched-join semantic operator (Trummer~V1) dominates both a row-wise pushdown baseline and its own uncascaded baseline on cost, F1, and worst-case robustness, at a small, quantified recall cost. We proved this dominance is not incidental: Proposition~\ref{prop:crossover} gives an exact margin condition on the cheap stage's batching factor and calibrated escalation rate, and Table~\ref{tab:theory-constants} shows the measured system satisfies it for Trummer~V1 and fails it for SUQL~V1 -- correctly predicting the $8\times$ wall-time regression the latter exhibits. \textbf{Batching SUQL~V1's currently row-wise cheap stage} is therefore the single most consequential remaining change, identified by theory rather than only by observation. Other near-term work: porting the Beta-posterior calibration bound to Trummer~V1 (currently a point-estimate agreement search); amortizing the one-time calibration cost across repeated invocations of the same predicate; and extending the benchmark across a selectivity sweep. Stretto's KV-cache-aware execution ladder (\emph{Expected Attention Press}) remains deferred pending a migration from Ollama to a backend exposing attention state directly (e.g.\ \texttt{vllm}).
-
-\begin{thebibliography}{9}
-\bibitem{suql} S.~Liu et al. SUQL: Conversational Search over Structured and Unstructured Data with Large Language Models. arXiv:2311.09818, 2023.
-\bibitem{eleet} M.~Urban and C.~Binnig. ELEET: Efficient Learned Query Execution over Text and Tables. Proc.\ VLDB Endow., 2024.
-\bibitem{stretto} G.~Sanmartino et al. Stretto: Bayesian Threshold Calibration and Cache-Aware Cascades for LLM Query Operators. arXiv:2602.04430v2, 2025.
-\end{thebibliography}
-
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{refs}
 \end{document}

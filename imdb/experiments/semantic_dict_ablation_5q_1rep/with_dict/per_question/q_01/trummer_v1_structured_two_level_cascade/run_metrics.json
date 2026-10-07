@@ -1,0 +1,79 @@
+{
+  "implementation": "trummer_v1_structured_two_level_cascade",
+  "mode": "llm",
+  "model": "ollama/granite3.2:2b->ollama/granite3.2:8b",
+  "cheap_model": "ollama/granite3.2:2b",
+  "expensive_model": "ollama/granite3.2:8b",
+  "input_movies": 40,
+  "input_reviews": 40,
+  "candidate_pairs": 40,
+  "cheap_batches": 5,
+  "cheap_calls": 5,
+  "cheap_failures": 0,
+  "cheap_failure_candidates": 0,
+  "cheap_early_accepts": 0,
+  "cheap_early_rejects": 0,
+  "calibration_candidates": 20,
+  "calibration_expensive_calls": 1,
+  "calibration_expensive_accepts": 7,
+  "calibration_agreement": 0.6470588235294118,
+  "learned_confidence_threshold": null,
+  "routing_confidence_threshold": null,
+  "manual_confidence_threshold": null,
+  "expensive_candidates": 40,
+  "expensive_calls": 3,
+  "fallback_expensive_calls": 2,
+  "expensive_failures": 1,
+  "expensive_accepts": 4,
+  "nonempty_fallback_rows": 0,
+  "cheap_seconds": 99.13432800099999,
+  "expensive_seconds": 468.8147335,
+  "cheap_time_percent": 17.4547921144554,
+  "expensive_time_percent": 82.5452078855446,
+  "elapsed_seconds": 567.9500520839999,
+  "cpu_seconds": 0.025836000000000026,
+  "engine_seconds": 567.9504170829999,
+  "wall_seconds": 567.9504170829999,
+  "llm_calls": 8,
+  "block_join_calls": 3,
+  "final_answer_rows": 4,
+  "found_movie_ids": [
+    "tt0301163",
+    "tt0306568",
+    "tt0379186",
+    "tt0446557"
+  ],
+  "original_movies": 100,
+  "original_reviews": 100,
+  "pruned_movies": 40,
+  "pruned_reviews": 40,
+  "structured_filters": [
+    {
+      "column": "year",
+      "op": "eq",
+      "value": "2001",
+      "source": "2001"
+    }
+  ],
+  "structured_pruning": {
+    "mode": "suql_sqlite",
+    "filters": [
+      {
+        "column": "year",
+        "op": "eq",
+        "value": "2001",
+        "source": "2001"
+      }
+    ],
+    "suql_query": "SELECT movie_id, title, year, runtime, director, genres\nFROM movies\nWHERE year = 2001\nAND answer(review, 'Does the review explicitly recommend the movie?') = 'Yes';",
+    "structural_sql": "SELECT movie_id, title, year, runtime, director, genres\nFROM movies\nWHERE year = 2001;",
+    "parser_model": "ollama/granite3.2:2b",
+    "parser_error": "",
+    "semantic_predicate": "Does the review explicitly recommend the movie?"
+  },
+  "structured_condition_location": "deterministic_prefilter",
+  "join_condition_location": "deterministic_prefilter",
+  "semantic_condition_location": "batch_cascade",
+  "question_dir": "q_01",
+  "question": "Which movies released in 2001 have reviews that explicitly recommend the movie?"
+}
